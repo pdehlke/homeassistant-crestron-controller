@@ -1,4 +1,4 @@
-# ha-cip-panel
+# homeassistant-crestron-controller
 
 Lets Home Assistant control a Crestron system by registering with the control processor as one of
 its touch panels, plus a command-line tool, `cip-panel`, for taking an inventory of a system before

@@ -9,8 +9,8 @@ and joins before Home Assistant is involved.
 ### With HACS
 
 CIP Panel is a custom integration, so HACS needs to be told about its repository once. Add
-`https://github.com/pdehlke/ha-cip-panel` to HACS as a custom repository of type Integration, then
-install "CIP Panel (for Crestron)" from HACS and restart Home Assistant. HACS's own documentation
+`https://github.com/pdehlke/homeassistant-crestron-controller` to HACS as a custom repository of
+type Integration, then install "CIP Panel (for Crestron)" from HACS and restart Home Assistant. HACS's own documentation
 describes adding a custom repository; the menu names have changed between HACS versions, so follow
 the version you have.
 

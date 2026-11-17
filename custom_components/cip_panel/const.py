@@ -37,7 +37,8 @@ STARTER_JOIN_MAP = """\
 #   2. Reload the integration (Settings > Devices & services > CIP Panel >
 #      three-dot menu > Reload) after every edit.
 #
-# Format: docs/configuration/join-map-reference.md in the ha-cip-panel repo.
+# Format: docs/configuration/join-map-reference.md in the
+# homeassistant-crestron-controller repository.
 version: 1
 
 # Joins that must never be written, whatever else this file says. If your
