@@ -1,5 +1,14 @@
 # Third-party notices
 
+## CresnetMon, by DosMan (acknowledgement)
+
+CresnetMon was written by DosMan and published on CodePlex in April 2015 under the Microsoft
+Public License (Ms-PL); a GitHub mirror is at
+[StephenGenusa/CresnetMon](https://github.com/StephenGenusa/CresnetMon). The work that became this
+project started as a fork of it. No CresnetMon code is included here, so no Ms-PL notice is
+required; this entry is an acknowledgement of where the project came from. See
+[disclaimer and credits](docs/about/disclaimer-and-credits.md).
+
 ## klenae/python-cipclient
 
 The CIP wire format in `custom_components/cip_panel/cipcore/protocol.py` was first worked out

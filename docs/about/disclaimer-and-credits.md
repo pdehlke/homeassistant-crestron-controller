@@ -32,14 +32,21 @@ the MIT licence, without warranty of any kind; see `LICENSE`.
 
 ## Credits
 
-- [klenae/python-cipclient](https://github.com/klenae/python-cipclient), MIT licensed. Its CIP
+- **python-cipclient, by klenae.** [klenae/python-cipclient](https://github.com/klenae/python-cipclient), MIT licensed. Its CIP
   client was where this project's understanding of the wire format started, and the analog and
   serial write encodings here still come from it. This project's code is a separate
   re-implementation, checked against real processors; see
   [cip-wire-format.md](../protocol/cip-wire-format.md) and `THIRD_PARTY_NOTICES.md`.
-- DosMan's original CresnetMon, a Cresnet bus monitor released under the Microsoft Public License
-  (Ms-PL). It inspired the author's private project, which began as Cresnet bus monitoring and took
-  its name before turning to CIP. No code from CresnetMon is included in this repository.
+- **CresnetMon, by DosMan.** DosMan wrote CresnetMon, a Windows Forms monitor for the Cresnet
+  RS-485 bus, and published it on CodePlex in April 2015 under the Microsoft Public License
+  (Ms-PL). Stephen Genusa later mirrored it to GitHub as
+  [StephenGenusa/CresnetMon](https://github.com/StephenGenusa/CresnetMon). This project exists
+  because of it: the author's own work on his Crestron system began as a fork of that mirror, first
+  as a Python port of DosMan's bus monitor, and the CIP panel emulation generalised here grew up in
+  the same repository. DosMan's work showed that a Crestron system could be understood from the
+  outside, by watching its own traffic, and that is the approach this project still takes. No code
+  from CresnetMon is included in this repository, which is why it carries no Ms-PL notice, but the
+  debt is real and is acknowledged here and in `THIRD_PARTY_NOTICES.md`.
 
 ## Author
 

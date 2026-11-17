@@ -25,5 +25,7 @@ The cost is that the reasoning behind the code is not in `git log`. It is in the
 these ADRs and the sanitised case studies under [docs/case-study/](../case-study/), which keep the
 measurements and the rejected options without the site details.
 
-No code from DosMan's original CresnetMon (Ms-PL), which inspired the private project's name and its
-bus-monitoring origin, is included. See [disclaimer-and-credits.md](../about/disclaimer-and-credits.md).
+The work this repository generalises began as a fork of DosMan's CresnetMon (Ms-PL, published on
+CodePlex in 2015). No CresnetMon code is included, so its licence does not bind this repository and
+MIT was free to choose, but DosMan is credited by name in the README, in `THIRD_PARTY_NOTICES.md` and
+in [disclaimer-and-credits.md](../about/disclaimer-and-credits.md).
