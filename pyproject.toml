@@ -1,0 +1,48 @@
+[project]
+name = "cip-panel"
+version = "0.1.0"
+description = "Inventory a Crestron system over CIP and impersonate a touch panel from Home Assistant"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [{ name = "Pete Ehlke" }]
+requires-python = ">=3.14.2"
+dependencies = ["pyyaml>=6"]
+
+[project.scripts]
+cip-panel = "cip_panel_cli.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-asyncio>=1",
+    "pytest-homeassistant-custom-component==0.13.375",
+    "ruff>=0.14",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+# One copy of the protocol code serves both the integration and the CLI. It
+# lives inside the integration because Home Assistant custom integrations can
+# only depend on PyPI packages; the wheel re-roots it as top-level `cipcore`.
+# See docs/adr/0002-protocol-code-lives-inside-the-integration.md.
+[tool.hatch.build.targets.wheel]
+packages = ["src/cip_panel_cli", "custom_components/cip_panel/cipcore"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/cip_panel_cli" = "cip_panel_cli"
+"custom_components/cip_panel/cipcore" = "cipcore"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
