@@ -7,9 +7,9 @@ import asyncio
 
 import pytest
 
-from custom_components.cip_panel.cipcore.client import Timing
-from custom_components.cip_panel.cipcore.joinmap import parse
-from custom_components.cip_panel.hub import Hub, HubError
+from custom_components.crestron_controller.cipcore.client import Timing
+from custom_components.crestron_controller.cipcore.joinmap import parse
+from custom_components.crestron_controller.hub import Hub, HubError
 from tests.conftest import wait_for
 
 FAST = {
@@ -136,7 +136,7 @@ async def test_an_unconfirmed_press_retries_after_re_entering_then_fails(process
     processor.toggles = {"lights": {}}  # presses produce no feedback
     hub = await start(processor, gated_map())
     try:
-        import custom_components.cip_panel.hub as hub_module
+        import custom_components.crestron_controller.hub as hub_module
 
         hub_module.CONFIRM_TIMEOUT = 0.3
         with pytest.raises(HubError, match="without the processor confirming"):

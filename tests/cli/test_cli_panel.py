@@ -16,8 +16,8 @@ import yaml
 from cipcore import joinmap
 from cli_fakes import FIXTURES, read_line
 
-from cip_panel_cli import ctp, panel
-from cip_panel_cli.panel import Control, Project, UnsupportedFormat
+from crestron_controller_cli import ctp, panel
+from crestron_controller_cli.panel import Control, Project, UnsupportedFormat
 
 FIXTURE = FIXTURES / "environment-x52-synthetic.xml"
 

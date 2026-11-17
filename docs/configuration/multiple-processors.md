@@ -11,7 +11,7 @@ Each processor is its own config entry: add the integration once per processor, 
 processor's address and a free IP-ID from that processor's own IP table. Each entry has:
 
 - its own join map file. Give each entry a distinct name, because the default file name is made from
-  it (`cip_panel/<name>.yaml`), or type a path yourself;
+  it (`crestron_controller/<name>.yaml`), or type a path yourself;
 - its own device in Home Assistant, named after the entry;
 - its own **Link** sensor and its own repairs;
 - its own writes option. You can turn writes on for one processor and leave another listen-only;
@@ -69,8 +69,8 @@ processor's entry for it was dropped.
 ## Areas and dashboards
 
 Home Assistant areas do not care which device an entity belongs to. A light on one processor and a
-light on another can sit in the same area, and an area card or a light group will treat them the same
-way. Assign areas per entity (or per device, if one processor serves one part of the house).
+light on another can sit in the same area, and an area card or a light group will treat them the
+same way. Assign areas per entity (or per device, if one processor serves one part of the house).
 
 The difference shows up when a link is down: entities on that link go unavailable while the others
 keep working. That is what you want, because it is true. See [dashboards](./dashboards.md).

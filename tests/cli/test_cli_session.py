@@ -1,4 +1,4 @@
-"""`cip-panel listen` and the watch labeller, against the TCP fake processor."""
+"""`crestron-controller listen` and the watch labeller, against the TCP fake processor."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from cipcore.joinmap import parse
 
-from cip_panel_cli import session
-from cip_panel_cli.__main__ import build_parser
+from crestron_controller_cli import session
+from crestron_controller_cli.__main__ import build_parser
 
 
 def args_for(processor, *extra, seconds="2"):

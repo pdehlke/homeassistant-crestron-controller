@@ -1,9 +1,9 @@
 # Dashboards
 
-CIP Panel's entities are ordinary Home Assistant lights, switches, binary sensors, buttons, sensors
-and numbers, so any card that works with those works with these. This page covers what is specific
-to them: how they are grouped, what their states mean, and a few choices that make a dashboard
-honest.
+Crestron Controller's entities are ordinary Home Assistant lights, switches, binary sensors,
+buttons, sensors and numbers, so any card that works with those works with these. This page covers
+what is specific to them: how they are grouped, what their states mean, and a few choices that make
+a dashboard honest.
 
 ## What you get per processor
 

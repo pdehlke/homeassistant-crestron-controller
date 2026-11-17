@@ -33,25 +33,25 @@ the allow list once writes are on.
 Do not guess entry joins by pressing things. On the system this was developed on, the home page that
 held the Lights and Audio buttons also held the button that entered the alarm keypad's section.
 
-The safe source is the touch panel's own project file. For a TSW x52 panel,
-`cip-panel panel fetch` downloads it and `cip-panel panel parse` lists the home page's buttons as
+The safe source is the touch panel's own project file. For a TSW x52 panel, `crestron-controller
+panel fetch` downloads it and `crestron-controller panel parse` lists the home page's buttons as
 likely entry joins. See [panel project files](../inventory/panel-project-files.md). Put the entry
 join of any section you never want Home Assistant in, such as an alarm or security section, on
 `never_write.digital`: the gated example does exactly that.
 
 ## Measuring quiet_seconds
 
-An entry dump has no end marker, so CIP Panel decides it is finished when the processor has been
-silent for `quiet_seconds`. Too short, and the dump is declared complete halfway through, which
-leaves joins missing that are really high. Too long, and every write into that subsystem waits
+An entry dump has no end marker, so Crestron Controller decides it is finished when the processor
+has been silent for `quiet_seconds`. Too short, and the dump is declared complete halfway through,
+which leaves joins missing that are really high. Too long, and every write into that subsystem waits
 longer than it needs to.
 
-The default, 0.85 seconds, is twice the largest gap measured inside an Audio entry dump on the system
-this was developed on. That system's Lights dumps had smaller gaps, so it used 0.5 for Lights. Your
-processor may differ. Measure it:
+The default, 0.85 seconds, is twice the largest gap measured inside an Audio entry dump on the
+system this was developed on. That system's Lights dumps had smaller gaps, so it used 0.5 for
+Lights. Your processor may differ. Measure it:
 
 ```sh
-cip-panel listen 10.0.0.20 --ipid 0x31 --enter 40 --allow-press --seconds 20
+crestron-controller listen 10.0.0.20 --ipid 0x31 --enter 40 --allow-press --seconds 20
 ```
 
 This presses join 40 once, and nothing else, then reports something like:
@@ -87,8 +87,8 @@ needed that subsystem fails with "could not enter the ... subsystem".
 
 After entering the default subsystem at bring-up, the link re-sends the update request to get the
 full state with an end marker, because the entry dump is partial. That re-poll is waited on exactly,
-for up to `timing.repoll_timeout` (5 seconds). If no end marker arrives, whatever did arrive is still
-merged, and a warning suggests setting `repoll_after_entry: false`.
+for up to `timing.repoll_timeout` (5 seconds). If no end marker arrives, whatever did arrive is
+still merged, and a warning suggests setting `repoll_after_entry: false`.
 
 Set it to `false` for a processor that never answers a second update request. On the system this
 was developed on, one of the two processors never did. That processor's program was not gated, so it
@@ -98,8 +98,8 @@ partial entry dump.
 ## idle_return_seconds
 
 When a command enters a non-default subsystem, the slot stays there afterwards. While it is away,
-the default subsystem's state is frozen at its last reading, and a light switched at a wall keypad is
-invisible. After `idle_return_seconds` with no activity (5 by default), the link sends the slot
+the default subsystem's state is frozen at its last reading, and a light switched at a wall keypad
+is invisible. After `idle_return_seconds` with no activity (5 by default), the link sends the slot
 back to the default subsystem.
 
 Make it longer than any run of commands you send in one go to the other subsystem, or the slot will
@@ -125,6 +125,6 @@ each subsystem.
 
 The first time writes go on, the link enters the default subsystem, and it will do so again at every
 reconnect, restart and idle return. If the program switches something on when a slot enters, you
-will see it now. The fix is choosing another slot. See
-[choosing an IP-ID](../getting-started/choosing-an-ip-id.md#step-3-check-what-entering-the-slot-does)
-and [the courtesy light post-mortem](../case-study/post-mortem-courtesy-light.md).
+will see it now. The fix is choosing another slot. See [choosing an
+IP-ID](../getting-started/choosing-an-ip-id.md#step-3-check-what-entering-the-slot-does) and [the
+courtesy light post-mortem](../case-study/post-mortem-courtesy-light.md).

@@ -12,7 +12,7 @@ import socket
 import pytest
 from cli_fakes import read_line
 
-from cip_panel_cli import console as c
+from crestron_controller_cli import console as c
 
 # A newer-firmware layout: blank DevID column and trailing descriptive columns.
 IPTABLE_WIDE = """\

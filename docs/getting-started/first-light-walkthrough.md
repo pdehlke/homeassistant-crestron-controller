@@ -11,9 +11,10 @@ Before you start you need a processor address and a free IP-ID
 
 ## 1. Connect, listen-only
 
-Add the integration (Settings > Devices & services > Add integration > CIP Panel). Give it a name,
-the processor address and the IP-ID, and leave the join map field blank. The form registers once to
-check, presses nothing, and creates `cip_panel/<name>.yaml` with an empty starter join map.
+Add the integration (Settings > Devices & services > Add integration > Crestron Controller). Give it
+a name, the processor address and the IP-ID, and leave the join map field blank. The form registers
+once to check, presses nothing, and creates `crestron_controller/<name>.yaml` with an empty starter
+join map.
 
 ## 2. See the Link sensor turn on
 
@@ -43,14 +44,14 @@ computer. There are two ways to find its join.
 Diagnostics list every join the processor has reported on this link, high and low, plus analog
 values and serial text. It is a zero-install inventory.
 
-### Option B: `cip-panel watch`
+### Option B: `crestron-controller watch`
 
 `watch` prints join changes as they happen, which is quicker. It registers as a panel, so it
 **must not use the same IP-ID as your Home Assistant entry**. Use a second free slot, or disable the
 entry while you run it (entry three-dot menu > Disable), and re-enable it afterwards.
 
 ```sh
-cip-panel watch 10.0.0.20 --ipid 0x31
+crestron-controller watch 10.0.0.20 --ipid 0x31
 ```
 
 Wait for `ready`, then switch the light at a keypad. You will see something like:
@@ -96,10 +97,10 @@ Reload the entry (entry three-dot menu > Reload). A new binary sensor appears. S
 the keypad a few times and watch the sensor follow it. If it does not follow exactly, you have the
 wrong join; go back to step 3.
 
-If the reload fails, the entry shows an error naming the entity and the problem. The
-[join map reference](../configuration/join-map-reference.md#validation-errors) lists every message.
-You can also check the file before reloading with `cip-panel check`, giving it a copy of the file:
-`cip-panel check main.yaml`.
+If the reload fails, the entry shows an error naming the entity and the problem. The [join map
+reference](../configuration/join-map-reference.md#validation-errors) lists every message. You can
+also check the file before reloading with `crestron-controller check`, giving it a copy of the file:
+`crestron-controller check main.yaml`.
 
 ## 5. Promote it to a light
 
@@ -133,12 +134,12 @@ never_write:
 ```
 
 Ranges are strings in quotes. The list wins over everything else in the file, and the file is
-refused if any entity would write a join on it. Read [write safety](../configuration/write-safety.md)
-for why this matters, including a real system where lighting and an alarm keypad shared one block
-of joins.
+refused if any entity would write a join on it. Read [write
+safety](../configuration/write-safety.md) for why this matters, including a real system where
+lighting and an alarm keypad shared one block of joins.
 
-Run `cip-panel check` on the file. Its output ends with exactly what Home Assistant would be allowed
-to write with writes on, and what it will never write.
+Run `crestron-controller check` on the file. Its output ends with exactly what Home Assistant would
+be allowed to write with writes on, and what it will never write.
 
 ## 7. Turn on writes
 
@@ -162,7 +163,8 @@ press join do not belong to the same load, or the press join does nothing on thi
 ## What next
 
 - Add the rest of your lights the same way, starting each one as a binary sensor.
-- Draft a whole map at once with `cip-panel listen --draft` or `cip-panel panel parse`, then
-  promote entries one by one. See [the inventory overview](../inventory/inventory-overview.md).
+- Draft a whole map at once with `crestron-controller listen --draft` or `crestron-controller panel
+  parse`, then promote entries one by one. See [the inventory
+  overview](../inventory/inventory-overview.md).
 - A second processor needs its own entry and its own join map:
   [multiple processors](../configuration/multiple-processors.md).

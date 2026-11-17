@@ -8,7 +8,7 @@ CIP (Crestron-IP) is the TCP protocol, on port 41794, that touch panels use to t
 [control processor](../concepts/glossary.md). Crestron does not publish it. The format here was
 first worked out from [klenae/python-cipclient](https://github.com/klenae/python-cipclient) (MIT)
 and then re-implemented and checked against real processors. The code is
-`custom_components/cip_panel/cipcore/protocol.py` (pure byte functions, no sockets) and
+`custom_components/crestron_controller/cipcore/protocol.py` (pure byte functions, no sockets) and
 `cipcore/client.py` (the session). Where the two disagree with this page, the code is right and
 this page needs fixing.
 

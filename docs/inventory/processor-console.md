@@ -1,10 +1,11 @@
 # The processor console
 
-Crestron processors and many touch panels have a plain-text console, the
-[CTP console](../concepts/glossary.md#ctp-console). The `cip-panel` tool uses it for two jobs:
-`cip-panel ipids` reads the processor's IP table, and `cip-panel console` sends commands you type.
-This page covers both. How the console works on the wire, and why file transfer needs port 41795,
-is in [the CTP console and file retrieval](../protocol/ctp-console-and-file-retrieval.md).
+Crestron processors and many touch panels have a plain-text console, the [CTP
+console](../concepts/glossary.md#ctp-console). The `crestron-controller` tool uses it for two jobs:
+`crestron-controller ipids` reads the processor's IP table, and `crestron-controller console` sends
+commands you type. This page covers both. How the console works on the wire, and why file transfer
+needs port 41795, is in [the CTP console and file
+retrieval](../protocol/ctp-console-and-file-retrieval.md).
 
 ## Ports
 
@@ -16,10 +17,10 @@ is in [the CTP console and file retrieval](../protocol/ctp-console-and-file-retr
 The tool refuses every telnet option the device offers rather than implementing any, because
 nothing it does needs one.
 
-## `cip-panel ipids`: list the IP-IDs
+## `crestron-controller ipids`: list the IP-IDs
 
 ```sh
-cip-panel ipids 10.0.0.20
+crestron-controller ipids 10.0.0.20
 ```
 
 This connects, sends `VER` and then `IPTABLE`, and nothing else. It prints the first line of the
@@ -85,13 +86,14 @@ first column.
 The host can be a touch panel instead of a processor. On the system this was developed on, a
 TSW-752's own `IPTABLE` listed exactly one entry: the processor it registers with, and the IP-ID it
 registers as. That is the most direct answer to "which processor does this panel belong to". See
-[finding your control processor](../getting-started/finding-your-control-processor.md#ask-the-touch-panel-itself).
+[finding your control
+processor](../getting-started/finding-your-control-processor.md#ask-the-touch-panel-itself).
 
-## `cip-panel console`: send a command
+## `crestron-controller console`: send a command
 
 ```sh
-cip-panel console 10.0.0.20 VER
-cip-panel console 10.0.0.20 --each VER IPTABLE WHO
+crestron-controller console 10.0.0.20 VER
+crestron-controller console 10.0.0.20 --each VER IPTABLE WHO
 ```
 
 **Console commands can change processor state, and some can restart the program or erase it. You
@@ -124,9 +126,9 @@ status 2 if one matches. Nothing is sent. It refuses:
   similar. Bare, they are allowed.
 - Any command starting with `ADD`, `REM`, `DEL` or `SET`.
 
-This list is a seatbelt. It cannot promise safety: Crestron firmware has hundreds of commands, varies by
-model and version, and accepts abbreviations. A command the list does not refuse is not thereby
-safe.
+This list is a seatbelt. It cannot promise safety: Crestron firmware has hundreds of commands,
+varies by model and version, and accepts abbreviations. A command the list does not refuse is not
+thereby safe.
 
 ## Logging in
 
@@ -137,7 +139,7 @@ that appears only if the console asks. There is no option to put a password on t
 because it would land in shell history.
 
 Login support has not been tested against a real processor with authentication enabled. If it
-misbehaves, run with `-v` (`cip-panel -v ipids ...`) to see what was sent and received.
+misbehaves, run with `-v` (`crestron-controller -v ipids ...`) to see what was sent and received.
 
 ## Exit status
 

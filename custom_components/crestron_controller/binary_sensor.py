@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .cipcore.joinmap import BINARY_SENSOR
-from .entity import CipPanelEntity, device_info, entities_of
+from .entity import CrestronControllerEntity, device_info, entities_of
 
 
 async def async_setup_entry(
@@ -19,7 +19,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class JoinSensor(CipPanelEntity, BinarySensorEntity):
+class JoinSensor(CrestronControllerEntity, BinarySensorEntity):
     def __init__(self, entry, item) -> None:
         super().__init__(entry, item)
         if item.device_class:

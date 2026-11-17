@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-DOMAIN = "cip_panel"
+DOMAIN = "crestron_controller"
 
 CONF_IPID = "ipid"
 CONF_JOIN_MAP = "join_map"
 CONF_ALLOW_WRITES = "allow_writes"
 
-DEFAULT_JOIN_MAP_DIR = "cip_panel"
+DEFAULT_JOIN_MAP_DIR = "crestron_controller"
 
 # How long a link may stay down before Home Assistant raises a repair. Long
 # enough that a processor reboot does not page anyone, short enough that a
@@ -26,15 +26,15 @@ CONFIRM_TIMEOUT = 3.0
 CONFIRM_ATTEMPTS = 2
 
 STARTER_JOIN_MAP = """\
-# Join map for one Crestron processor, used by the CIP Panel integration.
+# Join map for one Crestron processor, used by the Crestron Controller integration.
 #
 # This file starts empty on purpose. With no entities, Home Assistant still
 # connects, registers as your panel's IP-ID and shows a connectivity sensor,
 # which proves the connection before you map a single light.
 #
 # Next steps:
-#   1. Inventory your system with the cip-panel CLI and paste entries here.
-#   2. Reload the integration (Settings > Devices & services > CIP Panel >
+#   1. Inventory your system with the crestron-controller CLI and paste entries here.
+#   2. Reload the integration (Settings > Devices & services > Crestron Controller >
 #      three-dot menu > Reload) after every edit.
 #
 # Format: docs/configuration/join-map-reference.md in the

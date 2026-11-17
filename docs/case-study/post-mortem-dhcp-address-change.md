@@ -23,8 +23,8 @@ health. The house is described in [two-processor-house.md](two-processor-house.m
 ## How it was diagnosed
 
 The slot was ruled out by reasoning before any tool was opened. Lighting and audio shared that
-processor's link, and the second processor was a separate TCP connection to a separate box. "Everything
-on one link is dead, everything on the other is fine" is a statement about the link, not
+processor's link, and the second processor was a separate TCP connection to a separate box.
+"Everything on one link is dead, everything on the other is fine" is a statement about the link, not
 about anything layered on top of it. Any explanation that needed the slot would also have had to
 explain why the other connection was untouched.
 
@@ -78,11 +78,11 @@ not its address. Identity by logical role survives a network change; identity by
 
 - Link health is visible without reading a log. Every link has a connectivity `binary_sensor`,
   present even with an empty join map. `evaluate_health()` in
-  `custom_components/cip_panel/__init__.py` opens a repair when a link has been disconnected for
-  `UNREACHABLE_REPAIR_SECONDS` (600 seconds, in `const.py`): long enough that a processor reboot
-  pages nobody, short enough that an overnight move is noticed the same morning. Repairs also cover
-  an IP-ID the program does not define, a refused registration, and repeated displacement. See
-  [link-health-and-repairs.md](../troubleshooting/link-health-and-repairs.md).
+  `custom_components/crestron_controller/__init__.py` opens a repair when a link has been
+  disconnected for `UNREACHABLE_REPAIR_SECONDS` (600 seconds, in `const.py`): long enough that a
+  processor reboot pages nobody, short enough that an overnight move is noticed the same morning.
+  Repairs also cover an IP-ID the program does not define, a refused registration, and repeated
+  displacement. See [link-health-and-repairs.md](../troubleshooting/link-health-and-repairs.md).
 - The kind of failure is kept. `CipClient._session()` in `cipcore/client.py` records an
   unreachable host as `ERROR_UNREACHABLE` with the address in the message, and that text appears in
   the repair.

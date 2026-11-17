@@ -1,9 +1,9 @@
 # Watching keypads
 
-`cip-panel watch` registers with a control processor as a touch panel and prints every join that
-changes, as it changes. You switch a light at a wall keypad or a touch panel, and the join that
-tracks that light appears on screen. It is the quickest way to tie a join number to a real load,
-and it presses nothing unless you ask it to.
+`crestron-controller watch` registers with a control processor as a touch panel and prints every
+join that changes, as it changes. You switch a light at a wall keypad or a touch panel, and the join
+that tracks that light appears on screen. It is the quickest way to tie a join number to a real
+load, and it presses nothing unless you ask it to.
 
 ## Why a keypad shows up on a panel slot
 
@@ -17,7 +17,7 @@ slot, so watch the slot you intend to map the load through.
 ## Running it
 
 ```sh
-cip-panel watch 10.0.0.20 --ipid 0x31
+crestron-controller watch 10.0.0.20 --ipid 0x31
 ```
 
 `watch` takes the same `HOST`, `--ipid`, `--port`, `--enter`, `--allow-press` and `--never-write`
@@ -64,7 +64,7 @@ Check it against the panel project's "also appears as" notes and your `never_wri
 ## Naming as you go: `--label`
 
 ```sh
-cip-panel watch 10.0.0.20 --ipid 0x31 --label lights.yaml
+crestron-controller watch 10.0.0.20 --ipid 0x31 --label lights.yaml
 ```
 
 With `--label`, after each burst of changes goes quiet for a second, the tool lists the digital
@@ -89,7 +89,8 @@ Treat the lowest join as a starting point. If the comment lists several joins, s
 light again and confirm which one tracks it, then fix the entry by hand.
 
 The tool only appends entry lines, indented as items under `entities:`. To get a file that
-`cip-panel check` accepts as it grows, start it with the top of a join map before you begin:
+`crestron-controller check` accepts as it grows, start it with the top of a join map before you
+begin:
 
 ```yaml
 version: 1

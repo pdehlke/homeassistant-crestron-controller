@@ -1,10 +1,11 @@
 # The CTP console and file retrieval
 
-Crestron processors and touch panels run a plain-text console. The `cip-panel` CLI uses it, read-only,
-to identify a processor (`VER`), list the IP-IDs its program expects (`IPTABLE`), and fetch a
-touch panel's project file so the joins can be read by name instead of discovered by pressing. This
-page explains the two console ports, why file retrieval only works on one of them, and how the
-transfer itself works. The code is `src/cip_panel_cli/console.py` and `src/cip_panel_cli/ctp.py`.
+Crestron processors and touch panels run a plain-text console. The `crestron-controller` CLI uses
+it, read-only, to identify a processor (`VER`), list the IP-IDs its program expects (`IPTABLE`), and
+fetch a touch panel's project file so the joins can be read by name instead of discovered by
+pressing. This page explains the two console ports, why file retrieval only works on one of them,
+and how the transfer itself works. The code is `src/crestron_controller_cli/console.py` and
+`src/crestron_controller_cli/ctp.py`.
 
 What follows was observed on one system: two processors (an AADS and an MC2E) and TSW-752 panels.
 Other models and firmware may behave differently.
@@ -27,13 +28,13 @@ tested against a processor that actually requires a login.
 
 ## Read-only by intent
 
-`cip-panel ipids` sends `VER` and `IPTABLE` and nothing else. `cip-panel console` sends whatever you
-type, after checking it against a small deny list of commands that restart, erase, reflash or change
-settings. That list is a guard against slips. It cannot know every command or every abbreviation a
-given firmware accepts, so a command it does not refuse is not thereby safe. Commands that earned
-their place in diagnosing real problems on the system this was developed on, all read-only there,
-include `VER`, `IPTABLE`, `WHO`, `ERR`, `PROGUPTIME` and `REPORTCRESNET`. See
-[processor-console.md](../inventory/processor-console.md).
+`crestron-controller ipids` sends `VER` and `IPTABLE` and nothing else. `crestron-controller
+console` sends whatever you type, after checking it against a small deny list of commands that
+restart, erase, reflash or change settings. That list is a guard against slips. It cannot know every
+command or every abbreviation a given firmware accepts, so a command it does not refuse is not
+thereby safe. Commands that earned their place in diagnosing real problems on the system this was
+developed on, all read-only there, include `VER`, `IPTABLE`, `WHO`, `ERR`, `PROGUPTIME` and
+`REPORTCRESNET`. See [processor-console.md](../inventory/processor-console.md).
 
 One practical note: `REPORTCRESNET` on one processor replied well after a 45-second read window had
 closed, and its output turned up inside the next command's reply. A slow command may need a cheap
@@ -74,7 +75,7 @@ request down.
 XMODEM carries no file length, so the last block is padded. `ctp.strip_padding()` removes trailing
 `SUB` (`1A`) bytes. The panel project file observed here was padded with NUL bytes after its closing
 `</Crestron>` tag instead, which makes it invalid XML until the tail is cut;
-`cip_panel_cli/panel.py` trims it.
+`crestron_controller_cli/panel.py` trims it.
 
 ## How long it takes
 
@@ -85,12 +86,12 @@ The speed is the device's, not the network's.
 | TSW-752 project, `\display\swf\Environment.xml` | about 3.5 MB (3,583,494 bytes) | 705 seconds, roughly five 1K blocks per second |
 | A processor's compiled program file | much smaller | about four seconds |
 
-The panel reads its flash slowly and keeps working normally while it does. `cip-panel panel fetch`
-warns that a TSW-752 takes roughly 10 to 15 minutes.
+The panel reads its flash slowly and keeps working normally while it does. `crestron-controller
+panel fetch` warns that a TSW-752 takes roughly 10 to 15 minutes.
 
-The panel project is UTF-16 XML that names every page, button and join number in the clear. The
-same project was found on all four panels in that house, so one fetch covered them all. Only the
-TSW x52 format is understood by `cip-panel panel parse`; newer panels pack HTML5 projects in
+The panel project is UTF-16 XML that names every page, button and join number in the clear. The same
+project was found on all four panels in that house, so one fetch covered them all. Only the TSW x52
+format is understood by `crestron-controller panel parse`; newer panels pack HTML5 projects in
 archives, which are detected and refused. See
 [panel-project-files.md](../inventory/panel-project-files.md).
 

@@ -1,4 +1,4 @@
-# Reading cip-panel output
+# Reading crestron-controller output
 
 Join numbers are 1-based everywhere. `d`, `a` and `s` prefix digital, analog and serial joins.
 Digital values are 1 (high, on) or 0 (low, off); analog values are 0 to 65535; serial values are
@@ -38,7 +38,8 @@ are not grouped.
 The gated-program result: about a dozen digitals, a couple of analogs and over a hundred serials
 (labels), with nothing moving when lights change. Observed on a real processor that accepted
 registration with status byte `03`. This is success: the slot is registered and sees only the home
-menu. Next step is the entry join (workflow.md steps 4 and 5). Retrying or changing IP-ID will not help.
+menu. Next step is the entry join (workflow.md steps 4 and 5). Retrying or changing IP-ID will not
+help.
 
 Many digitals with the lights that are on reading high: the program is not gated, or the entered
 subsystem is the right one.

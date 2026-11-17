@@ -1,8 +1,8 @@
 # homeassistant-crestron-controller
 
 Lets Home Assistant control a Crestron system by registering with the control processor as one of
-its touch panels, plus a command-line tool, `cip-panel`, for taking an inventory of a system before
-Home Assistant is involved. Not affiliated with or endorsed by Crestron; see
+its touch panels, plus a command-line tool, `crestron-controller`, for taking an inventory of a
+system before Home Assistant is involved. Not affiliated with or endorsed by Crestron; see
 [disclaimer and credits](./docs/about/disclaimer-and-credits.md).
 
 This project began as a fork of DosMan's CresnetMon, the Cresnet bus monitor DosMan published in
@@ -33,8 +33,8 @@ order.
 
 - [Glossary](./docs/concepts/glossary.md): every Crestron and project term, explained for a
   newcomer.
-- [Joins](./docs/concepts/joins.md): digital, analog and serial joins, feedback, aliases, and why one
-  load can have several numbers.
+- [Joins](./docs/concepts/joins.md): digital, analog and serial joins, feedback, aliases, and why
+  one load can have several numbers.
 - [Subsystems](./docs/concepts/subsystems.md): programs that gate Lights or Audio behind a home-page
   button, and what that means for an impersonated panel.
 
@@ -42,12 +42,12 @@ order.
 
 - [Taking an inventory of your system](./docs/inventory/inventory-overview.md): the order of
   operations, what each tool tells you, and why there is no join-scanning command.
-- [The processor console](./docs/inventory/processor-console.md): `cip-panel ipids` and
-  `cip-panel console`, reading the IP table, and its quirks.
-- [Listening to a processor](./docs/inventory/listening-to-a-processor.md): `cip-panel listen`,
-  entering a gated subsystem with `--enter`, and measuring `quiet_seconds`.
-- [Watching keypads](./docs/inventory/watching-keypads.md): `cip-panel watch`, naming joins as you
-  press buttons on the wall.
+- [The processor console](./docs/inventory/processor-console.md): `crestron-controller ipids` and
+  `crestron-controller console`, reading the IP table, and its quirks.
+- [Listening to a processor](./docs/inventory/listening-to-a-processor.md): `crestron-controller
+  listen`, entering a gated subsystem with `--enter`, and measuring `quiet_seconds`.
+- [Watching keypads](./docs/inventory/watching-keypads.md): `crestron-controller watch`, naming
+  joins as you press buttons on the wall.
 - [Panel project files](./docs/inventory/panel-project-files.md): fetching and parsing a TSW x52
   panel's project to get every button's label and join.
 
@@ -84,14 +84,17 @@ order.
   hours of dead lighting after a processor restart, and the entry join that fixed it.
 - [The light that came on at every reconnect](./docs/case-study/post-mortem-courtesy-light.md): a
   courtesy action in the program, and why the only fix was a different slot.
-- [The processor that moved address overnight](./docs/case-study/post-mortem-dhcp-address-change.md):
-  an unreserved DHCP lease, 85 silent minutes, and the repairs that now surface it.
-- [The entry dump that published a lit light as dark](./docs/case-study/post-mortem-partial-entry-dumps.md):
-  partial dumps, and why state is merged and never rebuilt.
-- [The alarm keypad that shared join numbers with the lights](./docs/case-study/lesson-alarm-joins.md):
-  the origin of the never-write list.
-- [The reconnect backoff that could never step back down](./docs/case-study/lesson-backoff-that-never-reset.md):
-  a reset that read correctly and could never fire.
+- [The processor that moved address
+  overnight](./docs/case-study/post-mortem-dhcp-address-change.md): an unreserved DHCP lease, 85
+  silent minutes, and the repairs that now surface it.
+- [The entry dump that published a lit light as
+  dark](./docs/case-study/post-mortem-partial-entry-dumps.md): partial dumps, and why state is
+  merged and never rebuilt.
+- [The alarm keypad that shared join numbers with the
+  lights](./docs/case-study/lesson-alarm-joins.md): the origin of the never-write list.
+- [The reconnect backoff that could never step back
+  down](./docs/case-study/lesson-backoff-that-never-reset.md): a reset that read correctly and could
+  never fire.
 
 ## Patterns
 
@@ -109,14 +112,17 @@ order.
 
 - [0001: Impersonate a touch panel over CIP](./docs/adr/0001-impersonate-a-touch-panel-over-cip.md):
   the approach, against bus injection, new program logic and replacing the processor.
-- [0002: Protocol code lives inside the integration](./docs/adr/0002-protocol-code-lives-inside-the-integration.md):
-  one copy shared with the CLI.
-- [0003: Listen-only by default, with allow and deny lists](./docs/adr/0003-listen-only-by-default-with-allow-and-deny-lists.md):
-  where writes are checked and why.
-- [0004: Discrete on and off synthesised from feedback](./docs/adr/0004-discrete-on-off-synthesised-from-feedback.md):
-  toggle buttons made discrete inside the integration.
-- [0005: A config flow for the link, YAML for the join map](./docs/adr/0005-config-flow-plus-yaml-join-map.md):
-  against pure UI and pure YAML.
+- [0002: Protocol code lives inside the
+  integration](./docs/adr/0002-protocol-code-lives-inside-the-integration.md): one copy shared with
+  the CLI.
+- [0003: Listen-only by default, with allow and deny
+  lists](./docs/adr/0003-listen-only-by-default-with-allow-and-deny-lists.md): where writes are
+  checked and why.
+- [0004: Discrete on and off synthesised from
+  feedback](./docs/adr/0004-discrete-on-off-synthesised-from-feedback.md): toggle buttons made
+  discrete inside the integration.
+- [0005: A config flow for the link, YAML for the join
+  map](./docs/adr/0005-config-flow-plus-yaml-join-map.md): against pure UI and pure YAML.
 - [0006: Entry dumps merged, never rebuilt](./docs/adr/0006-entry-dumps-merged-never-rebuilt.md):
   stale beats wrong.
 - [0007: No join scanning in the CLI](./docs/adr/0007-no-join-scanning-in-the-cli.md): why the most
@@ -136,7 +142,8 @@ order.
 - [CONTEXT.md](./CONTEXT.md): the project vocabulary, for contributors and coding agents.
 - [CLAUDE.md](./CLAUDE.md) (also `AGENTS.md`): instructions for coding agents working on the code.
 - [Agent docs](./docs/agents/): issue tracker, triage labels and domain-doc conventions.
-- [The `cip-panel` agent skill](./.claude/skills/cip-panel/SKILL.md): helps your own coding agent
-  inventory a system and write a join map, with safety rules built in.
-- [Example join maps](./examples/): a simple ungated program and a gated one with a never-write list.
+- [The `crestron-controller` agent skill](./.claude/skills/crestron-controller/SKILL.md): helps your
+  own coding agent inventory a system and write a join map, with safety rules built in.
+- [Example join maps](./examples/): a simple ungated program and a gated one with a never-write
+  list.
 - [Third-party notices](./THIRD_PARTY_NOTICES.md) and [licence](./LICENSE) (MIT).

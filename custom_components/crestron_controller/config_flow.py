@@ -65,7 +65,7 @@ def _ensure_join_map(path) -> bool:
     return True
 
 
-class CipPanelConfigFlow(ConfigFlow, domain=DOMAIN):
+class CrestronControllerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -183,10 +183,10 @@ class CipPanelConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        return CipPanelOptionsFlow()
+        return CrestronControllerOptionsFlow()
 
 
-class CipPanelOptionsFlow(OptionsFlow):
+class CrestronControllerOptionsFlow(OptionsFlow):
     """Writes are off until the user turns them on here, on purpose."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

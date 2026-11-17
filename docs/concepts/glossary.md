@@ -11,18 +11,19 @@ topic, and each heading is a link target other pages use.
 The Crestron box that runs the program. It may be a dedicated processor (an MC2E, PRO3, CP3 or CP4,
 for example) or a product with a processor built in, such as an AADS audio distribution system. The
 processor owns every join. **Home Assistant connects to the processor, never to a touch panel.** A
-house can have more than one. See [finding your control processor](../getting-started/finding-your-control-processor.md).
+house can have more than one. See [finding your control
+processor](../getting-started/finding-your-control-processor.md).
 
 ### Program
 
 The logic an installer wrote for your system and loaded onto the processor, usually built in
-Crestron's SIMPL Windows. It decides what every button does. CIP Panel does not change it and does
-not need its source.
+Crestron's SIMPL Windows. It decides what every button does. Crestron Controller does not change it
+and does not need its source.
 
 ### Touch panel
 
 A Crestron screen (TSW, TPMC and similar) that connects to a processor over the network and shows
-pages the installer designed. CIP Panel impersonates one.
+pages the installer designed. Crestron Controller impersonates one.
 
 ### XPanel
 
@@ -47,8 +48,8 @@ to find out which processor a control point belongs to.
 
 ### CIP
 
-Crestron-IP, the TCP protocol on port 41794 that touch panels use to talk to a processor. CIP Panel
-speaks plain CIP only; authenticated and encrypted CIP (port 41796) are not supported.
+Crestron-IP, the TCP protocol on port 41794 that touch panels use to talk to a processor. Crestron
+Controller speaks plain CIP only; authenticated and encrypted CIP (port 41796) are not supported.
 
 ### CTP console
 
@@ -93,13 +94,13 @@ Text, used for labels and names the processor fills in on a panel page.
 
 ### Press
 
-A digital join going high and then low, as a finger on a button does. CIP Panel holds it high for
-0.12 seconds by default.
+A digital join going high and then low, as a finger on a button does. Crestron Controller holds it
+high for 0.12 seconds by default.
 
 ### Hold
 
 Keeping a digital join high. Not the same as a press: holding can ramp a dimmer or overwrite a
-scene. CIP Panel makes sure every press it starts is released.
+scene. Crestron Controller makes sure every press it starts is released.
 
 ### Feedback join
 
@@ -134,8 +135,8 @@ The home-page button join that enters a gated subsystem.
 ### Entry dump
 
 The joins a processor sends after an entry press. It is partial, not the same from one entry to the
-next, and has no end marker, so its end is detected by the processor going quiet. CIP Panel merges
-it into what it already knows and never rebuilds state from it.
+next, and has no end marker, so its end is detected by the processor going quiet. Crestron
+Controller merges it into what it already knows and never rebuilds state from it.
 
 ### Re-poll
 
@@ -191,8 +192,8 @@ differs from what was asked, and wait for the processor to confirm.
 
 ### Assumed state
 
-Home Assistant's term for an entity whose state is whatever it was last told, because nothing reports
-the real state. `momentary` lights and switches are assumed state.
+Home Assistant's term for an entity whose state is whatever it was last told, because nothing
+reports the real state. `momentary` lights and switches are assumed state.
 
 ## Failures
 
@@ -200,10 +201,11 @@ the real state. `momentary` lights and switches are assumed state.
 
 The processor ending the session by sending a disconnect. Repeated displacement may mean another
 device is using the same IP-ID. This project has not established how processors behave with two
-claimants, so it is a lead, not a diagnosis. See [IP-ID conflicts](../troubleshooting/ip-id-conflicts.md).
+claimants, so it is a lead, not a diagnosis. See [IP-ID
+conflicts](../troubleshooting/ip-id-conflicts.md).
 
 ### Repair
 
-A Home Assistant notice under Settings > Repairs. CIP Panel raises one when a link has been down for
-ten minutes or more, when the processor refuses the IP-ID, and when the session keeps being ended.
-See [link health and repairs](../troubleshooting/link-health-and-repairs.md).
+A Home Assistant notice under Settings > Repairs. Crestron Controller raises one when a link has
+been down for ten minutes or more, when the processor refuses the IP-ID, and when the session keeps
+being ended. See [link health and repairs](../troubleshooting/link-health-and-repairs.md).

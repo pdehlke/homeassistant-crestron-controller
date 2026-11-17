@@ -4,14 +4,14 @@ status: accepted
 
 # The CLI has no join-scanning command
 
-The `cip-panel` CLI helps a user find out what each join does by reading, never by pressing joins
-in bulk. It can list the IP-IDs a processor expects (`ipids`), record everything a processor reports
-to a slot (`listen`), show changes live while someone presses wall keypads and label them (`watch`),
-and fetch and parse a touch panel's own project file, which names every page, button and join
-(`panel fetch`, `panel parse`). The only press it can make is one join the user names explicitly,
-with `--enter JOIN --allow-press`, to enter a gated subsystem; that press still passes the client's
-write policy and the user's `--never-write` list. There is deliberately no command that presses a
-range of joins to see what happens.
+The `crestron-controller` CLI helps a user find out what each join does by reading, never by
+pressing joins in bulk. It can list the IP-IDs a processor expects (`ipids`), record everything a
+processor reports to a slot (`listen`), show changes live while someone presses wall keypads and
+label them (`watch`), and fetch and parse a touch panel's own project file, which names every page,
+button and join (`panel fetch`, `panel parse`). The only press it can make is one join the user
+names explicitly, with `--enter JOIN --allow-press`, to enter a gated subsystem; that press still
+passes the client's write policy and the user's `--never-write` list. There is deliberately no
+command that presses a range of joins to see what happens.
 
 The reason is the alarm collision on the system this was developed on: a touch panel project that
 used one block of join numbers for both a room's lighting buttons and an alarm keypad, including its

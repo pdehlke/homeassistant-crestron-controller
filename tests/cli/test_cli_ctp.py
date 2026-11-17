@@ -8,8 +8,8 @@ from collections.abc import Callable
 
 import pytest
 
-from cip_panel_cli import ctp
-from cip_panel_cli.ctp import ACK, CAN, EOT, NAK, SOH, STX, SUB
+from crestron_controller_cli import ctp
+from crestron_controller_cli.ctp import ACK, CAN, EOT, NAK, SOH, STX, SUB
 
 
 def block(num: int, payload: bytes, *, size: int = 128, crc: bool = True) -> bytes:

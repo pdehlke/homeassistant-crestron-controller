@@ -105,7 +105,7 @@ change across six entries. One entry logged an omitted high join and correctly l
 
 ## What this framework does about it
 
-All in `custom_components/cip_panel/cipcore/client.py`:
+All in `custom_components/crestron_controller/cipcore/client.py`:
 
 - `CipClient._merge()` applies a dump as a merge and only emits changes for joins the dump
   mentioned. Its docstring records why.
@@ -120,8 +120,9 @@ All in `custom_components/cip_panel/cipcore/client.py`:
   marker. If the marker never comes it still merges what arrived, because every digital frame in
   that window was diverted into the collection and discarding it would lose real feedback. Set
   `repoll_after_entry: false` for a processor that never answers a second update request.
-- `cip-panel listen --enter JOIN --allow-press` measures the gaps in your own entry dumps and
-  suggests a `quiet_seconds`. See [listening-to-a-processor.md](../inventory/listening-to-a-processor.md).
+- `crestron-controller listen --enter JOIN --allow-press` measures the gaps in your own entry dumps
+  and suggests a `quiet_seconds`. See
+  [listening-to-a-processor.md](../inventory/listening-to-a-processor.md).
 
 ## What to check on a different system
 

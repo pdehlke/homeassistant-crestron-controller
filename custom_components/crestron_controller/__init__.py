@@ -1,4 +1,4 @@
-"""CIP Panel: impersonate a Crestron touch panel from Home Assistant.
+"""Crestron Controller: impersonate a Crestron touch panel from Home Assistant.
 
 One config entry is one processor link: a host, the IP-ID of a panel slot the
 program defines, and a join map file under /config that says which joins are
@@ -55,7 +55,7 @@ class RuntimeData:
     health_task: asyncio.Task
 
 
-type CipPanelConfigEntry = ConfigEntry[RuntimeData]
+type CrestronControllerConfigEntry = ConfigEntry[RuntimeData]
 
 
 def join_map_path(hass: HomeAssistant, relative: str) -> Path:
@@ -76,7 +76,7 @@ def load_join_map(path: Path) -> JoinMap:
     return parse(raw)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: CipPanelConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: CrestronControllerConfigEntry) -> bool:
     path = join_map_path(hass, entry.data[CONF_JOIN_MAP])
     try:
         joinmap = await hass.async_add_executor_job(load_join_map, path)
@@ -103,7 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: CipPanelConfigEntry) -> 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: CipPanelConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: CrestronControllerConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         data = entry.runtime_data
@@ -114,12 +114,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: CipPanelConfigEntry) ->
     return unloaded
 
 
-async def async_remove_entry(hass: HomeAssistant, entry: CipPanelConfigEntry) -> None:
+async def async_remove_entry(hass: HomeAssistant, entry: CrestronControllerConfigEntry) -> None:
     for issue in _ISSUES:
         ir.async_delete_issue(hass, DOMAIN, _issue_id(entry, issue))
 
 
-async def _options_updated(hass: HomeAssistant, entry: CipPanelConfigEntry) -> None:
+async def _options_updated(hass: HomeAssistant, entry: CrestronControllerConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 

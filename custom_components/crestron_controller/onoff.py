@@ -12,10 +12,10 @@ from __future__ import annotations
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .cipcore.joinmap import PRESS_MOMENTARY
-from .entity import CipPanelEntity
+from .entity import CrestronControllerEntity
 
 
-class OnOffEntity(CipPanelEntity, RestoreEntity):
+class OnOffEntity(CrestronControllerEntity, RestoreEntity):
     def __init__(self, entry, item) -> None:
         super().__init__(entry, item)
         self._assumed_on: bool | None = None

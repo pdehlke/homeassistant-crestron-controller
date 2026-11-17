@@ -12,9 +12,9 @@ program answers it with the joins that slot has been wired to. The program's lis
 processor refuses to register an IP-ID its program does not define.
 
 IP-IDs are written in hexadecimal. `2A` means hex 2A (decimal 42). The setup form accepts `0x2A`,
-`2A` (read as hex, the way Crestron writes them) or `42d` (decimal, with a `d` suffix). On the system
-this was developed on, typing the decimal value where hex was expected produced a refusal saying the
-IP-ID did not exist, which looked like a much bigger problem than it was.
+`2A` (read as hex, the way Crestron writes them) or `42d` (decimal, with a `d` suffix). On the
+system this was developed on, typing the decimal value where hex was expected produced a refusal
+saying the IP-ID did not exist, which looked like a much bigger problem than it was.
 
 A **slot** in these docs is an IP-ID the program defines for a touch panel or software panel.
 "Borrowing a slot" means registering under an IP-ID whose real device is unplugged or was never
@@ -25,7 +25,7 @@ installed.
 The most direct way is the processor's IP table:
 
 ```sh
-cip-panel ipids 10.0.0.20
+crestron-controller ipids 10.0.0.20
 ```
 
 This sends the read-only `VER` and `IPTABLE` console commands and prints a table of every IP-ID
@@ -35,7 +35,8 @@ borrow". See [the processor console guide](../inventory/processor-console.md) fo
 mean and for what to do if the table cannot be parsed.
 
 If you cannot reach the console, a touch panel's own IP table or setup screen shows the IP-ID that
-panel uses ([finding your control processor](./finding-your-control-processor.md#ask-the-touch-panel-itself)).
+panel uses ([finding your control
+processor](./finding-your-control-processor.md#ask-the-touch-panel-itself)).
 
 ## Step 2: pick a slot nobody is using
 
@@ -81,16 +82,17 @@ nothing. The possible answers:
 | "Its program does not define that IP-ID" | The processor answered and refused this IP-ID. Check you entered it in hex. |
 | "Did not accept the registration" | Something else refused it. Authenticated or encrypted CIP is one possible cause. |
 
-`cip-panel listen` and `cip-panel watch` run the same check before they start.
+`crestron-controller listen` and `crestron-controller watch` run the same check before they start.
 
 ## Options that were rejected
 
 - Adding a new IP-ID to the program. This would be the cleanest answer, but it requires the
   program source and Crestron's programming software, which most owners do not have. This project
   is built for people who cannot change the program.
-- Sharing a live panel's IP-ID. What a processor does when two clients claim one IP-ID has not
-  been established by this project. The private notes this project grew from even disagree with
-  each other about it. Do not do it on purpose. See [IP-ID conflicts](../troubleshooting/ip-id-conflicts.md).
+- Sharing a live panel's IP-ID. What a processor does when two clients claim one IP-ID has not been
+  established by this project. The private notes this project grew from even disagree with each
+  other about it. Do not do it on purpose. See [IP-ID
+  conflicts](../troubleshooting/ip-id-conflicts.md).
 - Trying IP-IDs one after another until one registers. Each attempt registers, which claims
   that slot for a moment, and a slot in use may belong to a panel someone is holding. The IP table
   answers the same question without touching any slot.

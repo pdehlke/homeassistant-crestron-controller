@@ -66,13 +66,14 @@ table at all: subsystem entry presses, and presses typed on a command line.
   including entry joins, until you switch `allow_writes` on in the integration's options.
 - Once writes are on, only the [allow list](../concepts/glossary.md) can be written: every join an
   entity writes, plus the subsystem entry joins. `JoinMap.policy()` in
-  `custom_components/cip_panel/cipcore/joinmap.py` derives it; nobody writes it by hand.
+  `custom_components/crestron_controller/cipcore/joinmap.py` derives it; nobody writes it by hand.
 - The `never_write` list in the join map wins over everything. `WritePolicy.check()` in
   `cipcore/policy.py` checks it first, before even the listen-only test.
-- That check runs in the client at the last point before bytes reach the socket: `CipClient._press()`
-  (which covers entity presses and entry presses), `CipClient.async_set_analog()` and
-  `CipClient.async_send_serial()` in `cipcore/client.py`. The CLI uses the same client, so
-  `cip-panel listen --enter` and `watch` get the same check, with their own `--never-write` option.
+- That check runs in the client at the last point before bytes reach the socket:
+  `CipClient._press()` (which covers entity presses and entry presses),
+  `CipClient.async_set_analog()` and `CipClient.async_send_serial()` in `cipcore/client.py`. The CLI
+  uses the same client, so `crestron-controller listen --enter` and `watch` get the same check, with
+  their own `--never-write` option.
 - The join map is also checked when it loads. `_check()` in `joinmap.py` refuses a map in which an
   entity would write a never-write join, or in which a subsystem's entry join is on the list, and
   the message suggests mapping a safe alias instead. Unlike the deleted check above, the wire check

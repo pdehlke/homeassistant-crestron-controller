@@ -80,7 +80,9 @@ class Hub:
     async def async_start(self) -> None:
         await self.client.async_start()
         if self.joinmap.subsystems:
-            self._idle_task = asyncio.create_task(self._idle_watch(), name="cip_panel-idle")
+            self._idle_task = asyncio.create_task(
+                self._idle_watch(), name="crestron_controller-idle"
+            )
 
     async def async_stop(self) -> None:
         if self._idle_task:

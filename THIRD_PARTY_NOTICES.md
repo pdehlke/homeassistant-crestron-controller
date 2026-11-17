@@ -11,7 +11,7 @@ required; this entry is an acknowledgement of where the project came from. See
 
 ## klenae/python-cipclient
 
-The CIP wire format in `custom_components/cip_panel/cipcore/protocol.py` was first worked out
+The CIP wire format in `custom_components/crestron_controller/cipcore/protocol.py` was first worked out
 from [klenae/python-cipclient](https://github.com/klenae/python-cipclient) and then
 re-implemented. No code was copied verbatim, but the analog and serial write layouts follow
 that project's byte layouts exactly, so its notice is reproduced here.

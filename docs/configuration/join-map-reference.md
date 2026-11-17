@@ -3,13 +3,15 @@
 A join map is a YAML file, one per [link](../concepts/glossary.md#link), that says which
 [joins](../concepts/joins.md) become which Home Assistant entities, which
 [subsystems](../concepts/subsystems.md) exist, and which joins must never be written. This page
-documents every key. It matches `custom_components/cip_panel/cipcore/joinmap.py`, which is the
-source of truth; `cip-panel check` runs exactly the same validation as the integration.
+documents every key. It matches `custom_components/crestron_controller/cipcore/joinmap.py`, which is
+the source of truth; `crestron-controller check` runs exactly the same validation as the
+integration.
 
-The file lives under your Home Assistant config folder, by default at `cip_panel/<name>.yaml`.
-Changes take effect when you reload the entry; no restart is needed. Two complete examples ship
-with the repository: [join-map-simple.yaml](../../examples/join-map-simple.yaml) for an ungated
-program and [join-map-gated.yaml](../../examples/join-map-gated.yaml) for a gated one.
+The file lives under your Home Assistant config folder, by default at
+`crestron_controller/<name>.yaml`. Changes take effect when you reload the entry; no restart is
+needed. Two complete examples ship with the repository:
+[join-map-simple.yaml](../../examples/join-map-simple.yaml) for an ungated program and
+[join-map-gated.yaml](../../examples/join-map-gated.yaml) for a gated one.
 
 ## General rules
 
@@ -63,7 +65,7 @@ Where the defaults came from, all measured on the system this was developed on:
   that processor's Audio subsystem (0.419 seconds). Its Lights subsystem's worst gap was 0.246
   seconds, so Lights used 0.5. The larger Audio gap reproduced on a second slot, so it was a
   property of the processor rather than of one panel. Measure your own with
-  `cip-panel listen --enter JOIN --allow-press`, which prints a suggested value.
+  `crestron-controller listen --enter JOIN --allow-press`, which prints a suggested value.
 - `idle_return_seconds: 5.0` was chosen to be longer than any single operation holds the slot, so a
   run of commands in another subsystem does not bounce back to the default between each one, and
   short enough that keypad changes in the default subsystem are not invisible for long.
@@ -189,9 +191,9 @@ A read-only analog or serial join. Exactly one of `analog` or `serial`.
 | `unit` | text | `%` when `scale: percent`, otherwise none | The unit of measurement. |
 | `device_class` | a Home Assistant sensor device class | none | Must be a class Home Assistant knows. |
 
-Serial sensors are available whenever the link is connected and synced, whatever subsystem they name.
-On the system this was developed on, label serials arrived once per session rather than once per
-subsystem entry, so they are not filed by subsystem.
+Serial sensors are available whenever the link is connected and synced, whatever subsystem they
+name. On the system this was developed on, label serials arrived once per session rather than once
+per subsystem entry, so they are not filed by subsystem.
 
 ### number
 
@@ -232,8 +234,8 @@ With writes on, the allow list is exactly:
 - for a button, its `join` (digital);
 - for a number with `writable: true`, its `analog` join.
 
-Nothing else can be written. `cip-panel check FILE` prints this list, and the never-write list, in
-ranges.
+Nothing else can be written. `crestron-controller check FILE` prints this list, and the never-write
+list, in ranges.
 
 ## Validation errors
 
@@ -326,9 +328,9 @@ name. Cross-entity errors start with the entity's id.
 
 ### Errors from Home Assistant, not the schema
 
-A `device_class` that Home Assistant does not recognise passes `cip-panel check` but makes that
-platform fail to load in Home Assistant, and the error appears in the log. Use the classes listed in
-Home Assistant's documentation for binary sensors and sensors.
+A `device_class` that Home Assistant does not recognise passes `crestron-controller check` but makes
+that platform fail to load in Home Assistant, and the error appears in the log. Use the classes
+listed in Home Assistant's documentation for binary sensors and sensors.
 
 ## Keys that are not checked
 
@@ -339,4 +341,5 @@ Two places accept unknown keys without complaint, so a typo there is silently ig
 - inside `brightness`, such as `writeable: true`, which leaves the light read-only.
 
 `quiet_seconds` and `idle_return_seconds` are also not checked for being positive. Run
-`cip-panel check` and read its summary of subsystems to confirm the quiet values it will use.
+`crestron-controller check` and read its summary of subsystems to confirm the quiet values it will
+use.

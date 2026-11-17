@@ -5,10 +5,11 @@ status: accepted
 # Protocol code lives inside the integration
 
 The CIP protocol, the session client, the write policy and the join map validator live in
-`custom_components/cip_panel/cipcore/`, with zero Home Assistant imports. The integration imports
-it as a subpackage. The `cip-panel` CLI is built from the same files: its wheel re-roots that
-directory as a top-level `cipcore` package. There is one copy of the code, the CLI's `check` command
-runs exactly the validation the integration runs, and a HACS install is self-contained.
+`custom_components/crestron_controller/cipcore/`, with zero Home Assistant imports. The integration
+imports it as a subpackage. The `crestron-controller` CLI is built from the same files: its wheel
+re-roots that directory as a top-level `cipcore` package. There is one copy of the code, the CLI's
+`check` command runs exactly the validation the integration runs, and a HACS install is
+self-contained.
 
 ## Considered options
 

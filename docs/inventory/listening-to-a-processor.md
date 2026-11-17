@@ -1,21 +1,21 @@
 # Listening to a processor
 
-`cip-panel listen` registers with a control processor as one of its touch panels, records every
-join the processor reports for a while, and can write what it saw as a JSON inventory and as a
-draft join map. By default it presses nothing. This page explains how to run it, how to read what
-it prints, and what to do on a program that gates its subsystems, where listening alone shows only
-the menu.
+`crestron-controller listen` registers with a control processor as one of its touch panels, records
+every join the processor reports for a while, and can write what it saw as a JSON inventory and as a
+draft join map. By default it presses nothing. This page explains how to run it, how to read what it
+prints, and what to do on a program that gates its subsystems, where listening alone shows only the
+menu.
 
-Terms used here: a [slot](../concepts/glossary.md#slot) is a touch panel IP-ID the program
-defines; a [registration dump](../concepts/glossary.md#registration-dump) is the burst of join
-values a processor sends when a panel connects; a [gated subsystem](../concepts/glossary.md#gated-subsystem)
+Terms used here: a [slot](../concepts/glossary.md#slot) is a touch panel IP-ID the program defines;
+a [registration dump](../concepts/glossary.md#registration-dump) is the burst of join values a
+processor sends when a panel connects; a [gated subsystem](../concepts/glossary.md#gated-subsystem)
 is a section of the program a panel must enter by pressing a home-page button before the processor
 says anything about it.
 
 ## Running it
 
 ```sh
-cip-panel listen 10.0.0.20 --ipid 0x31 --json joins.json --draft draft.yaml
+crestron-controller listen 10.0.0.20 --ipid 0x31 --json joins.json --draft draft.yaml
 ```
 
 | Option | Meaning |
@@ -44,7 +44,7 @@ IP-ID followed by one of these, and exits with status 2:
 | Message | Meaning |
 | --- | --- |
 | `nothing answered. Is this the control processor's address?` | Nothing accepted a connection on that address and port. |
-| `the program does not define that IP-ID. Try cip-panel ipids.` | The processor answered and refused this IP-ID. Check it is in hex. |
+| `the program does not define that IP-ID. Try crestron-controller ipids.` | The processor answered and refused this IP-ID. Check it is in hex. |
 | `registration refused. Authenticated or encrypted CIP is not supported.` | The processor answered and refused for another reason. |
 
 Other short codes (`displaced`, `closed`) can appear if the processor ended the connection during
@@ -112,16 +112,16 @@ need to press it once. Do it in this order:
 4. **Enter, once, by name.**
 
    ```sh
-   cip-panel listen 10.0.0.20 --ipid 0x31 --enter 40 --allow-press \
+   crestron-controller listen 10.0.0.20 --ipid 0x31 --enter 40 --allow-press \
        --never-write '200-219,45' --json lights.json --draft lights.yaml
    ```
 
 ## What `--enter` does
 
-`--enter JOIN` presses that one digital join after the registration dump, and nothing else. The
-tool builds a write policy that allows only that join. If the join is on your `--never-write` list,
-the tool refuses before registering for real. Without `--allow-press`, it exits with "--enter presses a join
-on your system. Add --allow-press if you mean it."
+`--enter JOIN` presses that one digital join after the registration dump, and nothing else. The tool
+builds a write policy that allows only that join. If the join is on your `--never-write` list, the
+tool refuses before registering for real. Without `--allow-press`, it exits with "--enter presses a
+join on your system. Add --allow-press if you mean it."
 
 After the press, the processor sends an [entry dump](../concepts/glossary.md#entry-dump): the
 subsystem's joins, in a burst with no end marker. The tool waits for the burst to go quiet for
@@ -191,9 +191,9 @@ entry to the next, so repeat the run two or three times and keep the largest sug
 saw no dump at all, the draft falls back to 0.85 and says `# default`.
 
 The tool validates the draft with the same code the integration uses before writing it, so a fresh
-draft always passes `cip-panel check`. Nothing in it can write to the processor. Rename what you
-recognise, delete what you do not, and promote a `binary_sensor` to a `light` or `switch` only once
-you know what it drives ([join map reference](../configuration/join-map-reference.md)).
+draft always passes `crestron-controller check`. Nothing in it can write to the processor. Rename
+what you recognise, delete what you do not, and promote a `binary_sensor` to a `light` or `switch`
+only once you know what it drives ([join map reference](../configuration/join-map-reference.md)).
 
 ## Exit status
 

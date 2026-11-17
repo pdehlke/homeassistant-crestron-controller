@@ -1,8 +1,8 @@
 # Inventory workflow, step by step
 
-Run `cip-panel <command> --help` for the authoritative flag list; this file covers order and
-decisions. Run from the repo with `uv run cip-panel ...`, or `cip-panel ...` after
-`uv tool install .`. Addresses below are placeholders.
+Run `crestron-controller <command> --help` for the authoritative flag list; this file covers order
+and decisions. Run from the repo with `uv run crestron-controller ...`, or `crestron-controller ...`
+after `uv tool install .`. Addresses below are placeholders.
 
 ## 1. Find each processor
 
@@ -11,18 +11,18 @@ they have and where. A house can have two processors running separate programs (
 an AADS and an MC2E), and each load and control point belongs to one of them. Useful moves, all
 read-only:
 
-- `cip-panel console PANEL_ADDR IPTABLE` on a touch panel lists the processor it registers with
-  and its own IP-ID.
-- `cip-panel ipids HOST` prints the first `VER` line (model, firmware) and the IP table. A `CIP`
-  entry naming another model in its address column is a link to a second processor.
+- `crestron-controller console PANEL_ADDR IPTABLE` on a touch panel lists the processor it registers
+  with and its own IP-ID.
+- `crestron-controller ipids HOST` prints the first `VER` line (model, firmware) and the IP table. A
+  `CIP` entry naming another model in its address column is a link to a second processor.
 
 Docs: `docs/getting-started/finding-your-control-processor.md`.
 
 ## 2. List IP-IDs and choose a slot
 
 ```sh
-cip-panel ipids HOST            # telnet, port 23
-cip-panel ipids HOST --port 41795
+crestron-controller ipids HOST            # telnet, port 23
+crestron-controller ipids HOST --port 41795
 ```
 
 Choose with the user, in this order: a touch panel slot whose panel is gone; a panel they agree to
@@ -37,7 +37,7 @@ Docs: `docs/getting-started/choosing-an-ip-id.md`, `docs/inventory/processor-con
 ## 3. Listen
 
 ```sh
-cip-panel listen HOST --ipid 0x31 --seconds 30 --json joins.json --draft draft.yaml
+crestron-controller listen HOST --ipid 0x31 --seconds 30 --json joins.json --draft draft.yaml
 ```
 
 Presses nothing. Pre-flight failures exit 2 with a hint (wrong address, IP-ID not defined,
@@ -47,9 +47,9 @@ step 5 after step 4.
 ## 4. Panel project (TSW x52 only)
 
 ```sh
-cip-panel panel fetch PANEL_ADDR -o Environment.xml     # 10-15 minutes on a TSW-752
-cip-panel panel parse Environment.xml -o panel-draft.yaml
-cip-panel panel parse Environment.xml --format csv -o inventory.csv
+crestron-controller panel fetch PANEL_ADDR -o Environment.xml     # 10-15 minutes on a TSW-752
+crestron-controller panel parse Environment.xml -o panel-draft.yaml
+crestron-controller panel parse Environment.xml --format csv -o inventory.csv
 ```
 
 Tell the user the fetch is slow before starting it (one real 3.5 MB fetch took about 705 s); run it
@@ -73,7 +73,7 @@ Before any `--enter`:
 4. Ask: "May I press join N once to enter <subsystem>?" Proceed only on a yes naming that join.
 
 ```sh
-cip-panel listen HOST --ipid 0x31 --seconds 40 --enter 40 --allow-press \
+crestron-controller listen HOST --ipid 0x31 --seconds 40 --enter 40 --allow-press \
     --never-write '200-219,45' --json lights.json --draft lights.yaml
 ```
 
@@ -84,7 +84,7 @@ that join) and use the largest suggested `quiet_seconds`. The draft carries one 
 ## 6. Watch while the user presses keypads
 
 ```sh
-cip-panel watch HOST --ipid 0x31 --label lights.yaml
+crestron-controller watch HOST --ipid 0x31 --label lights.yaml
 # gated program: add --enter JOIN --allow-press --never-write LIST (same rules as step 5)
 ```
 
@@ -112,11 +112,12 @@ Every key must match `docs/configuration/join-map-reference.md`; unknown keys ar
 ## 8. Check and hand over
 
 ```sh
-cip-panel check lights.yaml
+crestron-controller check lights.yaml
 ```
 
 Walk the user through the "may write" ranges (should be exactly the entities' joins plus entry
 joins) and the "never written" ranges (should cover every safety join). Then they copy the file to
-the entry's join map path (default `/config/cip_panel/<name>.yaml`) and use Reload on the entry. No
-restart. Writes stay off until they turn on "Allow Home Assistant to press joins" in the entry's
-Configure dialog, which is their decision after reading `docs/configuration/write-safety.md`.
+the entry's join map path (default `/config/crestron_controller/<name>.yaml`) and use Reload on the
+entry. No restart. Writes stay off until they turn on "Allow Home Assistant to press joins" in the
+entry's Configure dialog, which is their decision after reading
+`docs/configuration/write-safety.md`.

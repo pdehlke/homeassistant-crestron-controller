@@ -22,12 +22,12 @@ So treat a conflict as something to avoid, not something with known consequences
 
 ## How to avoid one
 
-- Pick a slot that is defined but offline. `cip-panel ipids` shows each IP-ID's status. An IP-ID
-  that is online has something connected to it right now. See
-  [choosing an IP-ID](../getting-started/choosing-an-ip-id.md).
+- Pick a slot that is defined but offline. `crestron-controller ipids` shows each IP-ID's status. An
+  IP-ID that is online has something connected to it right now. See [choosing an
+  IP-ID](../getting-started/choosing-an-ip-id.md).
 - Cross-check with `WHO`. The `WHO` console command lists the clients connected right now. On the
   system this was developed on, it confirmed which panels were live. Run it with
-  `cip-panel console HOST WHO`.
+  `crestron-controller console HOST WHO`.
 - Never run the command-line tool on Home Assistant's IP-ID. `listen`, `watch`, and the
   registration check they start with all register. Use a second free slot for the tool, or disable
   the Home Assistant entry while the tool runs.
@@ -53,8 +53,9 @@ on what the processor does. Repeated displacement says "look here first", nothin
 
 ## If you suspect one
 
-1. Run `cip-panel ipids` and look at the status of your IP-ID. With Home Assistant connected it should
-   be online. Disable the entry and run it again: if it is still online, something else is using it.
+1. Run `crestron-controller ipids` and look at the status of your IP-ID. With Home Assistant
+   connected it should be online. Disable the entry and run it again: if it is still online,
+   something else is using it.
 2. Run `WHO` and look for an address that is not your Home Assistant host.
 3. Find that device. Its address in the router's client list usually identifies it.
 4. Either take that device offline or move Home Assistant to a different free slot.
@@ -63,4 +64,5 @@ on what the processor does. Repeated displacement says "look here first", nothin
 
 If you observe what your processor does with two clients on one IP-ID, under controlled conditions
 and on a slot whose joins are harmless, that is useful evidence for this project. Record the
-processor model and firmware (`VER`), what each client saw, and what the processor's IP table showed.
+processor model and firmware (`VER`), what each client saw, and what the processor's IP table
+showed.

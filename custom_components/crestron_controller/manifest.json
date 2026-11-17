@@ -1,6 +1,6 @@
 {
-  "domain": "cip_panel",
-  "name": "CIP Panel (for Crestron)",
+  "domain": "crestron_controller",
+  "name": "Crestron Controller (unofficial)",
   "codeowners": [],
   "config_flow": true,
   "dependencies": [],

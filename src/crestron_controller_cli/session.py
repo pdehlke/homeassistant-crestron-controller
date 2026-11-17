@@ -1,4 +1,4 @@
-"""`cip-panel listen` and `cip-panel watch`: register as a panel and record what arrives.
+"""`crestron-controller listen` and `watch`: register as a panel and record what arrives.
 
 Both register on an IP-ID and press nothing by default. On a program that gates
 its subsystems behind a home-page button, listening alone shows only the menu;
@@ -138,7 +138,7 @@ async def _preflight(args) -> bool:
         return True
     hints = {
         "unreachable": "nothing answered. Is this the control processor's address?",
-        "ipid_missing": "the program does not define that IP-ID. Try `cip-panel ipids`.",
+        "ipid_missing": "the program does not define that IP-ID. Try `crestron-controller ipids`.",
         "refused": "registration refused. Authenticated or encrypted CIP is not supported.",
     }
     print(f"{args.host} IP-ID 0x{args.ipid:02X}: {hints.get(result, result)}", file=sys.stderr)
@@ -199,7 +199,7 @@ def _snapshot(client: CipClient) -> dict:
 def _draft(client: CipClient, args, quiet: float | None = None) -> str:
     """A draft join map: every observed join as a read-only entity with a placeholder name."""
     lines = [
-        "# Draft join map from `cip-panel listen`. Every entry is read-only and every",
+        "# Draft join map from `crestron-controller listen`. Every entry is read-only and every",
         "# name is a placeholder: rename what you recognise, delete what you do not.",
         "# Promote a binary_sensor to a light or switch only once you know what it",
         "# drives. Format: docs/configuration/join-map-reference.md",

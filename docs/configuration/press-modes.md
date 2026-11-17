@@ -114,8 +114,8 @@ no processor has yet been seen to accept in this project, so test it on one ligh
   feels faster, but a toggle pressed when the load was already in the target state does the
   opposite of what was asked, and the dashboard would then show the opposite of the truth. Reading
   feedback first is the only way to make a toggle discrete.
-- Pressing without confirming. The press would usually work, but when it did not (a slot that
-  had silently dropped out of its subsystem, a feedback join mapped to the wrong load) Home Assistant
+- Pressing without confirming. The press would usually work, but when it did not (a slot that had
+  silently dropped out of its subsystem, a feedback join mapped to the wrong load) Home Assistant
   would never know. On the system this was developed on, unconfirmed presses were exactly how a
   processor that had stopped acting on a slot first showed itself.
 - Retrying until it works. More than one retry risks a toggle flipping twice if a confirmation is

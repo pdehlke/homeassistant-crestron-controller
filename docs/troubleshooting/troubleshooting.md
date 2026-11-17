@@ -12,7 +12,7 @@ Assistant log:
 logger:
   default: warning
   logs:
-    custom_components.cip_panel: debug
+    custom_components.crestron_controller: debug
 ```
 
 The diagnostics download (entry three-dot menu > Download diagnostics) shows the link's state, the
@@ -24,7 +24,7 @@ what each entity reads and writes. It contains the processor's address, so check
 | Message | What to check |
 | --- | --- |
 | Nothing answered on that address and port | The address is not the control processor, or Home Assistant cannot reach it. Check you entered the processor's address and not a touch panel's ([finding your control processor](../getting-started/finding-your-control-processor.md)), that port 41794 is reachable from the Home Assistant host, and that no firewall or VLAN separates them. |
-| The processor answered, but its program does not define that IP-ID | The IP-ID is not in the program. IP-IDs are hex: `14` is hex 14. Run `cip-panel ipids` to list the ones it defines. If you have two processors, check that this IP-ID came from this processor's table. |
+| The processor answered, but its program does not define that IP-ID | The IP-ID is not in the program. IP-IDs are hex: `14` is hex 14. Run `crestron-controller ipids` to list the ones it defines. If you have two processors, check that this IP-ID came from this processor's table. |
 | The processor answered but did not accept the registration | Something other than a missing IP-ID refused it, or it answered with something that was not CIP within 10 seconds. A processor requiring authenticated or encrypted CIP is one possible cause and is not supported ([unsupported systems](./unsupported-systems.md)). A processor that ended the session straight away is reported this way too; see [IP-ID conflicts](./ip-id-conflicts.md). |
 | Enter an IP-ID between 03 and FE | Use hex (`2A` or `0x2A`) or decimal with a `d` suffix (`42d`). |
 | The join map could not be used | The detail says what is wrong with the file. See [validation errors](../configuration/join-map-reference.md#validation-errors). |
@@ -33,8 +33,9 @@ what each entity reads and writes. It contains the processor's address, so check
 ## The entry fails to set up after a join map edit
 
 The entry card shows the validation error, which names the entity (`entities[3] (porch)`) and the
-fix. Correct the file and reload. `cip-panel check FILE` gives the same message without a reload.
-Every message is listed in [validation errors](../configuration/join-map-reference.md#validation-errors).
+fix. Correct the file and reload. `crestron-controller check FILE` gives the same message without a
+reload. Every message is listed in [validation
+errors](../configuration/join-map-reference.md#validation-errors).
 
 If the file is valid but an entity type fails to load, look in the log: an unrecognised
 `device_class` is the usual cause.
@@ -68,7 +69,8 @@ down for ten minutes, a repair appears. See [link health and repairs](./link-hea
 ## An entity shows the wrong state, or never changes
 
 - Wrong join. Switch the load at a keypad and watch which joins move, with diagnostics or
-  `cip-panel watch` on a second slot ([the walkthrough](../getting-started/first-light-walkthrough.md#3-find-the-join-for-one-light)).
+  `crestron-controller watch` on a second slot ([the
+  walkthrough](../getting-started/first-light-walkthrough.md#3-find-the-join-for-one-light)).
   Compare with the entity's `joins_read` attribute.
 - Wrong subsystem. On a gated program, the same join number means different things in different
   subsystems. Check the entity's `subsystem`.
@@ -77,8 +79,8 @@ down for ten minutes, a repair appears. See [link health and repairs](./link-hea
   partial entry dumps instead of trusting them; see
   [subsystems](../concepts/subsystems.md#entry-dumps-are-partial). A shorter
   `idle_return_seconds` shortens the window.
-- The program does not report it to panels. If no join moves when you switch the load at a
-  keypad, the program may simply not tell panel slots about that load. CIP Panel can only see what
+- The program does not report it to panels. If no join moves when you switch the load at a keypad,
+  the program may simply not tell panel slots about that load. Crestron Controller can only see what
   the program shows a panel. See [unsupported systems](./unsupported-systems.md).
 
 ## Switching a light fails
@@ -105,8 +107,9 @@ feedback join N really reports this load, and that the press join really drives 
   `watch`.
 - The press join may do nothing on this slot. Some programs wire a load's button on one page to do
   something different from the same load's button on another page. On the system this was developed
-  on, pressing one light's own button lit its feedback but did not switch the fixture, and the button
-  for the same light on another page did. Try `press: on_off` with that other join as `on_join`.
+  on, pressing one light's own button lit its feedback but did not switch the fixture, and the
+  button for the same light on another page did. Try `press: on_off` with that other join as
+  `on_join`.
 - On a gated program, something may have taken the slot out of its subsystem. The retry already
   re-enters; if both attempts fail, see [subsystem gating](../configuration/subsystem-gating.md).
 - On the system this was developed on, this exact error on every light was the first sign that a
@@ -126,17 +129,17 @@ join map against the panel project file.
 
 ## A light turns on by itself when Home Assistant restarts
 
-On a gated program, entering the default subsystem can trigger a courtesy action in the program, such
-as switching on a light in the borrowed panel's room. The link enters at every connect, reconnect,
-restart and idle return. Code cannot stop it; choose a different slot. See
-[the courtesy light post-mortem](../case-study/post-mortem-courtesy-light.md).
+On a gated program, entering the default subsystem can trigger a courtesy action in the program,
+such as switching on a light in the borrowed panel's room. The link enters at every connect,
+reconnect, restart and idle return. Code cannot stop it; choose a different slot. See [the courtesy
+light post-mortem](../case-study/post-mortem-courtesy-light.md).
 
 ## The command-line tool
 
 | Message | Meaning |
 | --- | --- |
 | `nothing answered. Is this the control processor's address?` | Same as the setup form's "nothing answered". |
-| `the program does not define that IP-ID. Try cip-panel ipids.` | Same as the setup form. |
+| `the program does not define that IP-ID. Try crestron-controller ipids.` | Same as the setup form. |
 | `registration refused. ...` | Same as the setup form. |
 | `--enter presses a join on your system. Add --allow-press if you mean it.` | `--enter` needs `--allow-press` as confirmation. |
 | `dN is on your --never-write list; refusing to press it.` | The join you asked to enter is denied. |

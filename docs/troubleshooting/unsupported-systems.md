@@ -1,13 +1,13 @@
 # Unsupported systems
 
-What CIP Panel cannot do, what it has not been tested on, and what it does without evidence that it
-works. Some of these are limits of the approach and will not change; others are gaps in this
-version.
+What Crestron Controller cannot do, what it has not been tested on, and what it does without
+evidence that it works. Some of these are limits of the approach and will not change; others are
+gaps in this version.
 
 ## Limits of the approach
 
-CIP Panel impersonates a touch panel. It can see and do only what the program lets a touch panel
-slot see and do.
+Crestron Controller impersonates a touch panel. It can see and do only what the program lets a touch
+panel slot see and do.
 
 | Situation | Why it cannot work | What you can do |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ slot see and do.
 | Serial writes | Encoded the same way and equally unverified. No entity type writes serials in this version. |
 | Console login in the command-line tool | Implemented, but untested against a processor that actually asks for a password. Both consoles on the system this was developed on had none. |
 | Two clients on one IP-ID | Unknown. See [IP-ID conflicts](./ip-id-conflicts.md). |
-| Panel project files other than TSW x52 `Environment.xml` | `cip-panel panel parse` reads only the x52 format. Newer panels (x60, x70) use HTML5 project archives, and older panels use other formats; both are detected and refused. See [panel project files](../inventory/panel-project-files.md). |
+| Panel project files other than TSW x52 `Environment.xml` | `crestron-controller panel parse` reads only the x52 format. Newer panels (x60, x70) use HTML5 project archives, and older panels use other formats; both are detected and refused. See [panel project files](../inventory/panel-project-files.md). |
 | Join offsets in panel projects | The parser applies page and subpage join offsets, but every project it was developed against had them all at zero. Where an offset was applied, its output says so. |
 
 Registration, heartbeats, the update request, every digital encoding, and analog and serial reads

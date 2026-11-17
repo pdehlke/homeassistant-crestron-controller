@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .cipcore.joinmap import NUMBER, SCALE_PERCENT
 from .cipcore.protocol import ANALOG_MAX
-from .entity import CipPanelEntity, entities_of
+from .entity import CrestronControllerEntity, entities_of
 
 
 async def async_setup_entry(
@@ -22,7 +22,7 @@ async def async_setup_entry(
     async_add_entities(JoinNumber(entry, item) for item in entities_of(entry, NUMBER))
 
 
-class JoinNumber(CipPanelEntity, NumberEntity):
+class JoinNumber(CrestronControllerEntity, NumberEntity):
     _attr_mode = NumberMode.SLIDER
 
     def __init__(self, entry, item) -> None:

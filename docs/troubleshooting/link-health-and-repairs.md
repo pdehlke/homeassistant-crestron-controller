@@ -36,26 +36,27 @@ Its attributes:
 
 ## Reconnecting
 
-When a session drops, the link reconnects on its own, waiting 1, 2, 5, 10 and then 30 seconds between
-attempts and staying at 30. After any session that reached synced, the wait starts again from 1
-second, so a healthy link that drops once is back quickly while a processor that keeps refusing is
-not hammered. Reaching synced is used as the test, rather than "the session ended", because it is a
-high bar a flapping link cannot clear: it takes a registration, a full dump and a quiet window. See
-[the backoff lesson](../case-study/lesson-backoff-that-never-reset.md) for the bug this replaced.
+When a session drops, the link reconnects on its own, waiting 1, 2, 5, 10 and then 30 seconds
+between attempts and staying at 30. After any session that reached synced, the wait starts again
+from 1 second, so a healthy link that drops once is back quickly while a processor that keeps
+refusing is not hammered. Reaching synced is used as the test, rather than "the session ended",
+because it is a high bar a flapping link cannot clear: it takes a registration, a full dump and a
+quiet window. See [the backoff lesson](../case-study/lesson-backoff-that-never-reset.md) for the bug
+this replaced.
 
 A new session starts from an empty copy of the joins. State from a previous session is not evidence
 about this one, and anything that changed while the link was down arrives in the new dump.
 
 ## Repairs
 
-Home Assistant checks each link every 30 seconds and raises or clears these repairs, under Settings >
-Repairs. Each names the entry, the processor address and the IP-ID. None can be fixed from the repair
-dialog; each clears itself once the condition ends.
+Home Assistant checks each link every 30 seconds and raises or clears these repairs, under Settings
+> Repairs. Each names the entry, the processor address and the IP-ID. None can be fixed from the
+repair dialog; each clears itself once the condition ends.
 
 | Repair | Raised when | What to do |
 | --- | --- | --- |
 | Crestron processor unreachable | The link has not been synced for ten minutes or more, for any reason. | If the processor uses DHCP, it may have moved: find it again ([finding your control processor](../getting-started/finding-your-control-processor.md)), reserve its address in your router, and update the entry. Otherwise check that it is powered and reachable. |
-| IP-ID is not defined on the processor | The link is down and the processor's last answer was that its program does not define the IP-ID. | The program was probably reloaded or changed. Run `cip-panel ipids` to see which IP-IDs it defines now and pick another slot. |
+| IP-ID is not defined on the processor | The link is down and the processor's last answer was that its program does not define the IP-ID. | The program was probably reloaded or changed. Run `crestron-controller ipids` to see which IP-IDs it defines now and pick another slot. |
 | The processor refused registration | The link is down and the processor refused the registration for another reason. | Authenticated or encrypted CIP are possible causes and are not supported ([unsupported systems](./unsupported-systems.md)). |
 | The processor keeps ending the session | The processor sent a disconnect three or more times in the last ten minutes. Raised even while the link is up between drops. | One possible cause is another device using the same IP-ID, such as a real touch panel or a second Home Assistant. This is a lead, not a diagnosis; see [IP-ID conflicts](./ip-id-conflicts.md). |
 
@@ -69,8 +70,9 @@ Removing an entry removes its repairs.
 
 Each link has its own sensor and its own repairs. If every entity on one link is unavailable and
 every entity on the other is fine, the problem is that link, not Home Assistant and not anything the
-two links share. On the system this was developed on, that one observation was enough to rule out the
-first suspect in both of its outages. See [multiple processors](../configuration/multiple-processors.md).
+two links share. On the system this was developed on, that one observation was enough to rule out
+the first suspect in both of its outages. See [multiple
+processors](../configuration/multiple-processors.md).
 
 ## Using the sensor in automations
 

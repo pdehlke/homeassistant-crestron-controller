@@ -4,18 +4,19 @@ Instructions for coding agents working in this repo. `AGENTS.md` is a symlink to
 
 ## What this repo is
 
-A Home Assistant custom integration, `cip_panel`, that registers with a Crestron control
-processor over CIP as one of its touch panels, plus `cip-panel`, a command-line tool that
+A Home Assistant custom integration, `crestron_controller`, that registers with a Crestron control
+processor over CIP as one of its touch panels, plus `crestron-controller`, a command-line tool that
 inventories a Crestron system before Home Assistant is involved. Both are generic: nothing here
 describes any one house. Not affiliated with Crestron.
 
-- `custom_components/cip_panel/cipcore/`: protocol, client, write policy and join map schema.
-  **Imports nothing from Home Assistant.** The CLI's wheel re-roots it as top-level `cipcore`
-  ([ADR 0002](./docs/adr/0002-protocol-code-lives-inside-the-integration.md)). Keep it that way;
-  an HA import here breaks the CLI.
-- `custom_components/cip_panel/*.py`: the Home Assistant side. `hub.py` is also HA-free and is
-  tested directly.
-- `src/cip_panel_cli/`: the CLI. One module per subcommand family, each exposing `register()`.
+- `custom_components/crestron_controller/cipcore/`: protocol, client, write policy and join map
+  schema. **Imports nothing from Home Assistant.** The CLI's wheel re-roots it as top-level
+  `cipcore` ([ADR 0002](./docs/adr/0002-protocol-code-lives-inside-the-integration.md)). Keep it
+  that way; an HA import here breaks the CLI.
+- `custom_components/crestron_controller/*.py`: the Home Assistant side. `hub.py` is also HA-free
+  and is tested directly.
+- `src/crestron_controller_cli/`: the CLI. One module per subcommand family, each exposing
+  `register()`.
 - `tests/`: `tests/core` (no HA needed), `tests/cli`, `tests/ha` (the
   `pytest-homeassistant-custom-component` harness). `tests/fake_processor.py` is a real TCP fake
   that models behaviour observed on real processors.
@@ -87,7 +88,8 @@ Single-context: [CONTEXT.md](./CONTEXT.md) (vocabulary) and `docs/adr/`. See
 
 GitHub Issues, via the `gh` CLI, once the GitHub repository exists. See
 [docs/agents/issue-tracker.md](./docs/agents/issue-tracker.md). Until then, open questions that
-should become issues are listed in [docs/project/open-questions.md](./docs/project/open-questions.md).
+should become issues are listed in
+[docs/project/open-questions.md](./docs/project/open-questions.md).
 
 ### Triage labels
 
@@ -96,9 +98,9 @@ Default five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`,
 
 ### Project skill
 
-[.claude/skills/cip-panel/SKILL.md](./.claude/skills/cip-panel/SKILL.md) helps a user's own
-coding agent inventory a system and write a join map. It is for users of this project, not for
-developing it.
+[.claude/skills/crestron-controller/SKILL.md](./.claude/skills/crestron-controller/SKILL.md) helps a
+user's own coding agent inventory a system and write a join map. It is for users of this project,
+not for developing it.
 
 ## Commits
 

@@ -1,4 +1,4 @@
-"""`cip-panel check`: validate a join map exactly as the integration will."""
+"""`crestron-controller check`: validate a join map exactly as the integration will."""
 
 from __future__ import annotations
 

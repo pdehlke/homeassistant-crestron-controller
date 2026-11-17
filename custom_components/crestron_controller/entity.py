@@ -28,7 +28,7 @@ def entities_of(entry: ConfigEntry, kind: str) -> list[MapEntity]:
     return [e for e in entry.runtime_data.hub.joinmap.entities if e.type == kind]
 
 
-class CipPanelEntity(Entity):
+class CrestronControllerEntity(Entity):
     """Pushed, never polled: redraws whenever a join it reads changes."""
 
     _attr_should_poll = False

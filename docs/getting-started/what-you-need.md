@@ -1,7 +1,7 @@
 # What you need
 
-This page lists what has to be true before CIP Panel can work in your house, and what is optional.
-If a word here is new, the [glossary](../concepts/glossary.md) explains it.
+This page lists what has to be true before Crestron Controller can work in your house, and what is
+optional. If a word here is new, the [glossary](../concepts/glossary.md) explains it.
 
 ## Required
 
@@ -14,7 +14,8 @@ If a word here is new, the [glossary](../concepts/glossary.md) explains it.
 | Knowledge of which joins must never be pressed | Some programs share join numbers between lights and an alarm keypad, a gate or a garage door. Nothing on the wire says which. You list those joins before turning writes on. | [Write safety](../configuration/write-safety.md). |
 
 One processor is one link and one config entry. A house with two processors needs two of each, and
-that is common enough to have its own page: [multiple processors](../configuration/multiple-processors.md).
+that is common enough to have its own page: [multiple
+processors](../configuration/multiple-processors.md).
 
 ## Not required
 
@@ -31,7 +32,7 @@ that is common enough to have its own page: [multiple processors](../configurati
 
 | Optional | What it gives you |
 | --- | --- |
-| The `cip-panel` command-line tool, installed with `uv` on a computer with Python 3.14 | Lists the IP-IDs a processor defines (`cip-panel ipids`), shows join changes live while you press keypads (`cip-panel watch`), records a full join inventory (`cip-panel listen`), reads a TSW x52 panel's project file (`cip-panel panel`), and validates a join map (`cip-panel check`). See [installing](./installing.md). |
+| The `crestron-controller` command-line tool, installed with `uv` on a computer with Python 3.14 | Lists the IP-IDs a processor defines (`crestron-controller ipids`), shows join changes live while you press keypads (`crestron-controller watch`), records a full join inventory (`crestron-controller listen`), reads a TSW x52 panel's project file (`crestron-controller panel`), and validates a join map (`crestron-controller check`). See [installing](./installing.md). |
 | Access to the processor's text console (telnet on port 23, or the CTP console on port 41795) | Lets you identify the processor model and read its IP table, which is the most direct way to find a free IP-ID. On the system this was developed on, both consoles answered with no password. Console login is implemented in the CLI but has not been tested against a processor that asks for one. |
 | A touch panel you can take offline | If no spare slot exists, unplugging a panel frees its IP-ID. Its project file is also the safest source of join numbers. |
 | A DHCP reservation for the processor | Not strictly required, but strongly advised. A processor that changes address overnight takes every entity on that link with it. See [the DHCP post-mortem](../case-study/post-mortem-dhcp-address-change.md). |

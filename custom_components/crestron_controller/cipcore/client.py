@@ -50,7 +50,7 @@ class Subsystem:
     gap between two frames inside one dump, or the dump is declared complete in
     the middle and the subsystem is rebuilt from partial state. The default is
     twice the worst gap measured on the system this was developed on; measure
-    your own with `cip-panel listen --enter`.
+    your own with `crestron-controller listen --enter`.
     """
 
     name: str
@@ -211,7 +211,7 @@ class CipClient:
 
     async def async_start(self) -> None:
         self._running = True
-        self._task = asyncio.create_task(self._run(), name=f"cip_panel-{self.name}")
+        self._task = asyncio.create_task(self._run(), name=f"crestron_controller-{self.name}")
 
     async def async_stop(self) -> None:
         self._running = False
@@ -355,7 +355,9 @@ class CipClient:
         if loop.time() - self._last_bringup < self.timing.bringup_retry_seconds:
             return
         self._last_bringup = loop.time()
-        self._bringup = asyncio.create_task(self._bring_up(), name=f"cip_panel-up-{self.name}")
+        self._bringup = asyncio.create_task(
+            self._bring_up(), name=f"crestron_controller-up-{self.name}"
+        )
 
     async def _bring_up(self) -> None:
         """Finish coming up, entering the default subsystem first where there is one.

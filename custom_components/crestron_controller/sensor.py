@@ -8,7 +8,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .cipcore.joinmap import SCALE_PERCENT, SENSOR
 from .cipcore.protocol import ANALOG_MAX
-from .entity import CipPanelEntity, entities_of
+from .entity import CrestronControllerEntity, entities_of
 
 
 async def async_setup_entry(
@@ -17,7 +17,7 @@ async def async_setup_entry(
     async_add_entities(JoinValueSensor(entry, item) for item in entities_of(entry, SENSOR))
 
 
-class JoinValueSensor(CipPanelEntity, SensorEntity):
+class JoinValueSensor(CrestronControllerEntity, SensorEntity):
     def __init__(self, entry, item) -> None:
         super().__init__(entry, item)
         if item.analog is not None:

@@ -7,8 +7,8 @@ panel's project, and on TSW x52 panels it sits on the panel's own storage as one
 Reading it is the safe way to learn a system's joins, because it names them without pressing
 anything.
 
-`cip-panel panel fetch` downloads the file from the panel, and `cip-panel panel parse` turns it into
-an inventory and a draft [join map](../concepts/glossary.md#join-map).
+`crestron-controller panel fetch` downloads the file from the panel, and `crestron-controller panel
+parse` turns it into an inventory and a draft [join map](../concepts/glossary.md#join-map).
 
 ## What a panel project is
 
@@ -24,7 +24,7 @@ own project. Panels of different models will certainly differ.
 ## Fetching it
 
 ```sh
-cip-panel panel fetch 10.0.0.31 -o Environment.xml
+crestron-controller panel fetch 10.0.0.31 -o Environment.xml
 ```
 
 Point it at the touch panel's address, not the processor's. The tool connects to the panel's
@@ -54,14 +54,14 @@ and time and suggests the next command:
 
 ```text
 wrote Environment.xml: 3583494 bytes in 705s
-next: cip-panel panel parse Environment.xml -o draft.yaml
+next: crestron-controller panel parse Environment.xml -o draft.yaml
 ```
 
 ### When it fails
 
-If the panel turns the request down, the tool prints its refusal and suggests checking the path
-with `cip-panel console HOST --port 41795 DIR \display`. If the transfer is cancelled or the panel
-goes silent, the tool reports how many bytes had arrived and writes nothing: a truncated file
+If the panel turns the request down, the tool prints its refusal and suggests checking the path with
+`crestron-controller console HOST --port 41795 DIR \display`. If the transfer is cancelled or the
+panel goes silent, the tool reports how many bytes had arrived and writes nothing: a truncated file
 reported as success would be the worse outcome after a ten-minute wait. Either way the exit status
 is 1. Run it again.
 
@@ -71,8 +71,8 @@ How the transfer works on the wire is in
 ## Parsing it
 
 ```sh
-cip-panel panel parse Environment.xml -o draft.yaml
-cip-panel panel parse Environment.xml --format csv -o inventory.csv
+crestron-controller panel parse Environment.xml -o draft.yaml
+crestron-controller panel parse Environment.xml --format csv -o inventory.csv
 ```
 
 | Option | Meaning |
@@ -154,7 +154,7 @@ usually what enter them. The draft's header lists every labelled home-page butto
 
 Unlabelled home-page buttons are listed separately as less likely. These are candidates and
 nothing more: some home-page buttons only navigate. Confirm one with
-`cip-panel listen --enter JOIN --allow-press` after checking it is not on a safety page
+`crestron-controller listen --enter JOIN --allow-press` after checking it is not on a safety page
 ([listening to a processor](./listening-to-a-processor.md#on-a-gated-program)). An alarm
 subsystem's entry button is on the home page too, and belongs in `never_write`.
 
@@ -206,7 +206,7 @@ offset was applied, the draft says so above the entry:
 ```
 
 and the CSV fills in its `offsets_applied` column. Check those joins with
-[`cip-panel watch`](./watching-keypads.md) before relying on them.
+[`crestron-controller watch`](./watching-keypads.md) before relying on them.
 
 ### The CSV inventory
 

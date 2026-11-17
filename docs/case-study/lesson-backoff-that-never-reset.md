@@ -61,12 +61,12 @@ not an experiment worth running on a house people live in.
 
 ## What this framework does about it
 
-`CipClient._run()` in `custom_components/cip_panel/cipcore/client.py` carries the fixed logic,
-including a comment at the exact line that captures `synced` before `_close()`. The steps are
-`Timing.reconnect_backoff`, `(1.0, 2.0, 5.0, 10.0, 30.0)`; `_parse_timing()` in `joinmap.py`
-leaves them out of the keys the join map's `timing:` section accepts, so they are not
-configurable. A link that stays down long enough raises a repair whatever
-the backoff is doing; see [link-health-and-repairs.md](../troubleshooting/link-health-and-repairs.md).
+`CipClient._run()` in `custom_components/crestron_controller/cipcore/client.py` carries the fixed
+logic, including a comment at the exact line that captures `synced` before `_close()`. The steps are
+`Timing.reconnect_backoff`, `(1.0, 2.0, 5.0, 10.0, 30.0)`; `_parse_timing()` in `joinmap.py` leaves
+them out of the keys the join map's `timing:` section accepts, so they are not configurable. A link
+that stays down long enough raises a repair whatever the backoff is doing; see
+[link-health-and-repairs.md](../troubleshooting/link-health-and-repairs.md).
 
 ## What to check in your own code
 

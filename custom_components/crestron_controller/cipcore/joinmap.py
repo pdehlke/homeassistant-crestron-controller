@@ -4,7 +4,7 @@ A join map is a YAML file the user owns, usually drafted by the inventory CLI
 and then edited by hand. This module turns the parsed YAML into validated
 dataclasses and refuses, with a message a novice can act on, anything that
 would be unsafe or ambiguous. It imports nothing from Home Assistant, so
-`cip-panel check` runs exactly the validation the integration runs.
+`crestron-controller check` runs exactly the validation the integration runs.
 
 The format is documented for users in docs/configuration/join-map-reference.md.
 Keep the two in step.

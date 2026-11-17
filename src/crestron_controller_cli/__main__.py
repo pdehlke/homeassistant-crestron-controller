@@ -1,4 +1,4 @@
-"""Entry point for `cip-panel`.
+"""Entry point for `crestron-controller`.
 
 Each subcommand lives in its own module, which exposes `register(subparsers)`
 to add its parser and set `func` on it. `func(args)` returns the exit status.
@@ -20,7 +20,7 @@ from . import check, console, panel, session
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="cip-panel",
+        prog="crestron-controller",
         description="Inventory a Crestron system and draft a join map for Home Assistant.",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="log protocol detail")

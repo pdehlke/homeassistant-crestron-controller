@@ -16,7 +16,7 @@
           "host": "The control processor's IP address or DNS name. This is the processor the touch panel talks to, not the panel itself.",
           "ipid": "The IP-ID of a panel slot the program defines and nothing else is using, in hex as Crestron writes it (for example 0x2A or 2A).",
           "port": "Leave at 41794 unless you know your processor uses another.",
-          "join_map": "Path under your config folder. Leave blank to create cip_panel/<name>.yaml with a starter template."
+          "join_map": "Path under your config folder. Leave blank to create crestron_controller/<name>.yaml with a starter template."
         }
       },
       "reconfigure": {
@@ -33,7 +33,7 @@
       "invalid_ipid": "Enter an IP-ID between 03 and FE, in hex (0x2A) or decimal with a d suffix (20d).",
       "invalid_join_map": "The join map could not be used: {detail}",
       "cannot_connect": "Nothing answered on that address and port. Check the address is the control processor and that Home Assistant can reach it.",
-      "ipid_missing": "The processor answered, but its program does not define that IP-ID. Run cip-panel ipids to list the ones it does.",
+      "ipid_missing": "The processor answered, but its program does not define that IP-ID. Run crestron-controller ipids to list the ones it does.",
       "refused": "The processor answered but did not accept the registration. It may require authentication or encrypted CIP, which this integration does not support yet."
     },
     "abort": {
@@ -66,7 +66,7 @@
     },
     "ipid_missing": {
       "title": "{name}: IP-ID {ipid} is not defined on the processor",
-      "description": "{host} answered but its program does not define IP-ID {ipid}. If the program was reloaded or changed, run cip-panel ipids to see which IP-IDs it defines now."
+      "description": "{host} answered but its program does not define IP-ID {ipid}. If the program was reloaded or changed, run crestron-controller ipids to see which IP-IDs it defines now."
     },
     "refused": {
       "title": "{name}: the processor refused registration",

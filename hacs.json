@@ -1,5 +1,5 @@
 {
-  "name": "CIP Panel (for Crestron)",
+  "name": "Crestron Controller (unofficial)",
   "homeassistant": "2026.10.0",
   "render_readme": false
 }

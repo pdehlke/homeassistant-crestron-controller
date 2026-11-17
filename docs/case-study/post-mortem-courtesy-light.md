@@ -72,8 +72,8 @@ The framework cannot prevent a courtesy action, and does not pretend to. What it
 
 - In [listen-only](../configuration/write-safety.md) mode, the default, no entry join is ever
   pressed, so no courtesy action can fire until you enable writes. `CipClient._bring_up()` in
-  `custom_components/cip_panel/cipcore/client.py` checks the policy before entering and logs that
-  it cannot enter instead.
+  `custom_components/crestron_controller/cipcore/client.py` checks the policy before entering and
+  logs that it cannot enter instead.
 - Entry happens at bring-up after every connect, on demand before a write to another subsystem
   (`CipClient.async_enter()`), after an unconfirmed press (`Hub.async_set()` in `hub.py` calls
   `invalidate_subsystem()`), and on idle return (`Hub._idle_watch()`, governed by
@@ -85,9 +85,9 @@ The framework cannot prevent a courtesy action, and does not pretend to. What it
 ## What to check on a different system
 
 - Before enabling writes on a gated program, test the candidate slot. With someone watching the
-  rooms, run `cip-panel listen HOST --ipid 0x2A --enter JOIN --allow-press` (your own slot and the
-  default subsystem's entry join) and see whether anything changes. Repeat from a state where any
-  suspect light is off.
+  rooms, run `crestron-controller listen HOST --ipid 0x2A --enter JOIN --allow-press` (your own slot
+  and the default subsystem's entry join) and see whether anything changes. Repeat from a state
+  where any suspect light is off.
 - Ask whoever lives with the system whether waking a particular panel does something. Habits like
   "that panel always turns the light by the door on" are evidence.
 - A test that presses nothing, or a press made by hand at a real panel, does not test what the

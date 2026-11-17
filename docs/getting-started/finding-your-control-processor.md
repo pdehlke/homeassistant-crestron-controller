@@ -6,14 +6,15 @@ lose an afternoon.
 
 ## Home Assistant connects to the processor, never to a panel
 
-**CIP Panel connects to the control processor.** It does not connect to a touch panel, a keypad, a
-remote or an app. Whatever address you type into the setup form must be the processor's.
+**Crestron Controller connects to the control processor.** It does not connect to a touch panel, a
+keypad, a remote or an app. Whatever address you type into the setup form must be the processor's.
 
-The reason is where the program lives. A [control processor](../concepts/glossary.md#control-processor)
-runs the program and owns every [join](../concepts/joins.md). A touch panel is a screen that
-connects to the processor and asks it what to show. A wall keypad is a set of buttons wired to the
-processor's Cresnet bus, and usually has no network address at all. CIP Panel replaces one touch
-panel, so it has to talk to the thing a touch panel talks to.
+The reason is where the program lives. A [control
+processor](../concepts/glossary.md#control-processor) runs the program and owns every
+[join](../concepts/joins.md). A touch panel is a screen that connects to the processor and asks it
+what to show. A wall keypad is a set of buttons wired to the processor's Cresnet bus, and usually
+has no network address at all. Crestron Controller replaces one touch panel, so it has to talk to
+the thing a touch panel talks to.
 
 It is an easy mistake to make. The touch panel is the box you can see and the one you think of as
 "the Crestron". The processor is often in a rack, a closet or an equipment cabinet, and may not
@@ -52,8 +53,8 @@ So you need to find out three things:
 ## Ways to find out
 
 Each method below was used on the system this project was developed on. None of them changes
-anything on the processor. Commands shown as `cip-panel ...` use the command-line tool described in
-[installing](./installing.md); `10.0.0.20` and similar addresses are examples.
+anything on the processor. Commands shown as `crestron-controller ...` use the command-line tool
+described in [installing](./installing.md); `10.0.0.20` and similar addresses are examples.
 
 ### Look at your router's client list
 
@@ -88,14 +89,14 @@ connection with a line of this form, which named the model first (one said `AADS
 <model> Control Console  Connected to Host: <hostname>
 ```
 
-The read-only `VER` command reports the model and firmware. `cip-panel ipids` sends `VER` and
-`IPTABLE` and nothing else, and prints the first line of the `VER` reply:
+The read-only `VER` command reports the model and firmware. `crestron-controller ipids` sends `VER`
+and `IPTABLE` and nothing else, and prints the first line of the `VER` reply:
 
 ```sh
-cip-panel ipids 10.0.0.20
+crestron-controller ipids 10.0.0.20
 ```
 
-You can also send `VER` alone with `cip-panel console 10.0.0.20 VER`. Read the warning in
+You can also send `VER` alone with `crestron-controller console 10.0.0.20 VER`. Read the warning in
 [the processor console guide](../inventory/processor-console.md) before sending anything else.
 
 On the system this was developed on, identifying the device from its own banner turned out to
@@ -106,18 +107,18 @@ and the banner turned it into a fact before anything was pointed at it.
 
 `IPTABLE` on a processor's console lists every IP-ID its program defines, what type of connection
 each one is, whether it is online right now, and the address of whatever is connected.
-`cip-panel ipids` prints it as a table and lists the IP-IDs that are defined but offline, which are
-the candidates for Home Assistant to borrow ([choosing an IP-ID](./choosing-an-ip-id.md)).
+`crestron-controller ipids` prints it as a table and lists the IP-IDs that are defined but offline,
+which are the candidates for Home Assistant to borrow ([choosing an IP-ID](./choosing-an-ip-id.md)).
 
 This is also how you tie touch panels to processors. If a panel's address appears in a processor's
 IP table as online, that panel belongs to that processor. On the system this was developed on, the
 AADS's table listed the TSW-752 panels by address; the MC2E's table listed no panels at all,
 only its link to the AADS and the unused XPanel slot.
 
-Two cautions from that system. IP-IDs are written in hexadecimal: for example `20` in a table is hex 20, not
-decimal 20, and entering the decimal value produced a misleading "IP-ID does not exist" refusal.
-And a processor that links to another processor shows that link in the same table; on that system
-the link between the two appeared, with the same IP-ID, in both processors' tables.
+Two cautions from that system. IP-IDs are written in hexadecimal: for example `20` in a table is hex
+20, not decimal 20, and entering the decimal value produced a misleading "IP-ID does not exist"
+refusal. And a processor that links to another processor shows that link in the same table; on that
+system the link between the two appeared, with the same IP-ID, in both processors' tables.
 
 The `WHO` console command, which is also read-only, lists the clients connected right now with
 their addresses. It is a useful cross-check on the IP table.
@@ -130,7 +131,7 @@ which was the AADS. That entry gives you the processor's address and, in its IP-
 IP-ID the panel registers as.
 
 ```sh
-cip-panel console 10.0.0.31 IPTABLE
+crestron-controller console 10.0.0.31 IPTABLE
 ```
 
 Here `10.0.0.31` is the panel's address and the answer names the processor's. This is the most
@@ -187,7 +188,7 @@ gives a panel slot a join for that load, and whether that join is safe to write.
 | Nothing yet | Check the router's client list for Crestron devices, then the banner or `VER` on each to tell processors from panels. |
 | A touch panel's address | Run `IPTABLE` on the panel's console. The entry it lists is its processor. |
 | A touch panel you can stand in front of | Look in its on-screen setup for the processor address. Menus vary by model and firmware. |
-| A candidate processor address | Read its banner, run `cip-panel ipids` to get `VER` and the IP table, and check the table for your panels' addresses. |
+| A candidate processor address | Read its banner, run `crestron-controller ipids` to get `VER` and the IP table, and check the table for your panels' addresses. |
 | A wall keypad | It has no address. Run `REPORTCRESNET` on each processor's console to see which bus lists it. |
 | A load you want in Home Assistant | Inventory each processor's panel joins and look for that load's feedback. Prefer the processor where its joins are safe to write. |
 | A link that already works and a load that does not | Check whether the load died together with everything else on one link. That load belongs to that link. |

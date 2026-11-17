@@ -14,17 +14,21 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.cip_panel import ISSUE_IPID_MISSING, ISSUE_UNREACHABLE, evaluate_health
-from custom_components.cip_panel.cipcore import client as cip
-from custom_components.cip_panel.config_flow import parse_ipid
-from custom_components.cip_panel.const import (
+from custom_components.crestron_controller import (
+    ISSUE_IPID_MISSING,
+    ISSUE_UNREACHABLE,
+    evaluate_health,
+)
+from custom_components.crestron_controller.cipcore import client as cip
+from custom_components.crestron_controller.config_flow import parse_ipid
+from custom_components.crestron_controller.const import (
     CONF_ALLOW_WRITES,
     CONF_IPID,
     CONF_JOIN_MAP,
     DOMAIN,
     UNREACHABLE_REPAIR_SECONDS,
 )
-from custom_components.cip_panel.diagnostics import async_get_config_entry_diagnostics
+from custom_components.crestron_controller.diagnostics import async_get_config_entry_diagnostics
 from tests.conftest import wait_for
 
 JOIN_MAP = """\
@@ -46,8 +50,8 @@ entities:
 
 
 def add_entry(hass, config_dir, processor, *, writes=True, join_map=JOIN_MAP):
-    (config_dir / "cip_panel").mkdir(exist_ok=True)
-    (config_dir / "cip_panel" / "house.yaml").write_text(join_map)
+    (config_dir / "crestron_controller").mkdir(exist_ok=True)
+    (config_dir / "crestron_controller" / "house.yaml").write_text(join_map)
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="House",
@@ -57,7 +61,7 @@ def add_entry(hass, config_dir, processor, *, writes=True, join_map=JOIN_MAP):
             CONF_HOST: "127.0.0.1",
             CONF_PORT: processor.port,
             CONF_IPID: 0x2A,
-            CONF_JOIN_MAP: "cip_panel/house.yaml",
+            CONF_JOIN_MAP: "crestron_controller/house.yaml",
         },
         options={CONF_ALLOW_WRITES: writes},
     )
@@ -188,7 +192,7 @@ async def test_config_flow_creates_entry_and_starter_map(hass, config_dir, proce
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_IPID] == 0x2A
     assert result["options"] == {CONF_ALLOW_WRITES: False}
-    assert (config_dir / "cip_panel" / "main_processor.yaml").exists()
+    assert (config_dir / "crestron_controller" / "main_processor.yaml").exists()
     assert processor.presses == []
     await hass.async_block_till_done()
     for entry in hass.config_entries.async_entries(DOMAIN):

@@ -89,7 +89,7 @@ gated link reports no digital joins after entry, because this failure is silent 
 - Gating is declared in the join map under `subsystems:`, with a `default` subsystem and an entry
   join for each. See [subsystem-gating.md](../configuration/subsystem-gating.md).
 - `CipClient._bring_up()` in
-  `custom_components/cip_panel/cipcore/client.py` enters the default subsystem after the
+  `custom_components/crestron_controller/cipcore/client.py` enters the default subsystem after the
   registration dump, re-polls for full state, and only then sets `synced`. A fresh session starts
   with `current_subsystem` set to `None` (unknown), so a reconnect always re-enters.
 - `CipClient.has_state_for()` makes an entity in a subsystem that has not been entered this session
@@ -101,8 +101,8 @@ gated link reports no digital joins after entry, because this failure is silent 
 - In [listen-only](../configuration/write-safety.md) mode the entry press is a write and is refused,
   so entities in a gated subsystem stay unavailable. That is deliberate: nothing has been said
   about them.
-- `cip-panel listen --enter JOIN --allow-press` shows the difference directly: listen without it
-  and a gated program sends only its menu. See
+- `crestron-controller listen --enter JOIN --allow-press` shows the difference directly: listen
+  without it and a gated program sends only its menu. See
   [listening-to-a-processor.md](../inventory/listening-to-a-processor.md).
 
 ## What to check on a different system

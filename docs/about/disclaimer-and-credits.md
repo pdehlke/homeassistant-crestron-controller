@@ -32,7 +32,8 @@ the MIT licence, without warranty of any kind; see `LICENSE`.
 
 ## Credits
 
-- **python-cipclient, by klenae.** [klenae/python-cipclient](https://github.com/klenae/python-cipclient), MIT licensed. Its CIP
+- **python-cipclient, by klenae.**
+  [klenae/python-cipclient](https://github.com/klenae/python-cipclient), MIT licensed. Its CIP
   client was where this project's understanding of the wire format started, and the analog and
   serial write encodings here still come from it. This project's code is a separate
   re-implementation, checked against real processors; see

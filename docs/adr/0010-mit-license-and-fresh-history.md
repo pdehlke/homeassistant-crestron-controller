@@ -27,5 +27,5 @@ measurements and the rejected options without the site details.
 
 The work this repository generalises began as a fork of DosMan's CresnetMon (Ms-PL, published on
 CodePlex in 2015). No CresnetMon code is included, so its licence does not bind this repository and
-MIT was free to choose, but DosMan is credited by name in the README, in `THIRD_PARTY_NOTICES.md` and
-in [disclaimer-and-credits.md](../about/disclaimer-and-credits.md).
+MIT was free to choose, but DosMan is credited by name in the README, in `THIRD_PARTY_NOTICES.md`
+and in [disclaimer-and-credits.md](../about/disclaimer-and-credits.md).

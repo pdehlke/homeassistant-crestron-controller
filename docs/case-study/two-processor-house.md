@@ -47,8 +47,8 @@ something registered.
 | Which joins does a touch panel use, and for what? | The panel's own compiled project file, fetched from its console. It names every page, button and join number. See [panel-project-files.md](../inventory/panel-project-files.md). |
 | Which joins does the XPanel slot reach? | The MC2E's compiled program was retrieved and read. Because that program was searched and found to contain no alarm, security or access control of any kind, its press joins were also pressed one at a time and the results watched. See [lesson-alarm-joins.md](lesson-alarm-joins.md) for why that was acceptable on that processor and nowhere else. |
 
-`cip-panel ipids` runs exactly the read-only part of this for you (`VER` and `IPTABLE`), and the
-rest of the inventory tooling is described in
+`crestron-controller ipids` runs exactly the read-only part of this for you (`VER` and `IPTABLE`),
+and the rest of the inventory tooling is described in
 [inventory-overview.md](../inventory/inventory-overview.md). The broader procedure is in
 [finding-your-control-processor.md](../getting-started/finding-your-control-processor.md).
 
@@ -108,7 +108,8 @@ The second time, the AADS's address changed overnight. The bridge's slot had bee
 before, so the slot was the obvious suspect. It was ruled out without opening a log, by the split
 itself: lighting and audio shared the AADS link, the MC2E was a separate connection to a separate
 processor, and any explanation that blamed the slot would also have had to explain why the other
-connection was untouched. See [post-mortem-dhcp-address-change.md](post-mortem-dhcp-address-change.md).
+connection was untouched. See
+[post-mortem-dhcp-address-change.md](post-mortem-dhcp-address-change.md).
 
 The sentence worth keeping is the owner's: **"All AADS loads dead, MC2E fine" is a statement about
 the link, not the slot.** Whatever is shared by everything that broke, and not shared by anything
