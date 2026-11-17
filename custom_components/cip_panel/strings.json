@@ -1,0 +1,80 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to a Crestron processor",
+        "description": "Home Assistant will register with the processor as one of its touch panels. It presses nothing during setup, and stays listen-only until you enable writes in the options. {detail}",
+        "data": {
+          "name": "Name",
+          "host": "Processor address",
+          "ipid": "Panel IP-ID",
+          "port": "CIP port",
+          "join_map": "Join map file"
+        },
+        "data_description": {
+          "name": "A label for this processor, such as Main processor or Audio distribution.",
+          "host": "The control processor's IP address or DNS name. This is the processor the touch panel talks to, not the panel itself.",
+          "ipid": "The IP-ID of a panel slot the program defines and nothing else is using, in hex as Crestron writes it (for example 0x2A or 2A).",
+          "port": "Leave at 41794 unless you know your processor uses another.",
+          "join_map": "Path under your config folder. Leave blank to create cip_panel/<name>.yaml with a starter template."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the processor address or IP-ID",
+        "description": "Use this if the processor moved to a new address or you switched to another panel slot. Entities and their history are kept. Home Assistant registers once to check the new settings and presses nothing.",
+        "data": {
+          "host": "Processor address",
+          "ipid": "Panel IP-ID",
+          "port": "CIP port"
+        }
+      }
+    },
+    "error": {
+      "invalid_ipid": "Enter an IP-ID between 03 and FE, in hex (0x2A) or decimal with a d suffix (20d).",
+      "invalid_join_map": "The join map could not be used: {detail}",
+      "cannot_connect": "Nothing answered on that address and port. Check the address is the control processor and that Home Assistant can reach it.",
+      "ipid_missing": "The processor answered, but its program does not define that IP-ID. Run cip-panel ipids to list the ones it does.",
+      "refused": "The processor answered but did not accept the registration. It may require authentication or encrypted CIP, which this integration does not support yet."
+    },
+    "abort": {
+      "already_configured": "This processor and IP-ID are already set up.",
+      "reconfigure_successful": "Settings updated. The integration has reloaded with the new address."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Writes",
+        "description": "Off means listen-only: Home Assistant reads every join and writes none. Before turning writes on, list every join that must never be pressed (alarm keypads, gates, garage doors) under never_write in your join map. Even with writes on, only joins mapped to an entity, plus subsystem entry joins, can ever be written.",
+        "data": {
+          "allow_writes": "Allow Home Assistant to press joins"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "link": {
+        "name": "Link"
+      }
+    }
+  },
+  "issues": {
+    "unreachable": {
+      "title": "{name}: Crestron processor unreachable",
+      "description": "Home Assistant has not been able to hold a session with {host} as IP-ID {ipid} for over ten minutes. Last error: {error}.\n\nIf the processor gets its address from DHCP, it may have moved. Reserve its address in your router, then update the address with Reconfigure on the integration's menu. This repair clears itself once the link comes back."
+    },
+    "ipid_missing": {
+      "title": "{name}: IP-ID {ipid} is not defined on the processor",
+      "description": "{host} answered but its program does not define IP-ID {ipid}. If the program was reloaded or changed, run cip-panel ipids to see which IP-IDs it defines now."
+    },
+    "refused": {
+      "title": "{name}: the processor refused registration",
+      "description": "{host} refused IP-ID {ipid}. Last error: {error}. Processors that require authentication or encrypted CIP are not supported yet."
+    },
+    "displaced": {
+      "title": "{name}: the processor keeps ending the session",
+      "description": "{host} has ended this link's session several times in the last ten minutes. One possible cause is another device using IP-ID {ipid}, such as a real touch panel or a second Home Assistant. This project has not established how every processor behaves when two clients claim one IP-ID, so treat this as a lead, not a diagnosis."
+    }
+  }
+}

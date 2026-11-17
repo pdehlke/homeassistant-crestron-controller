@@ -1,0 +1,13 @@
+{
+  "domain": "cip_panel",
+  "name": "CIP Panel (for Crestron)",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/pdehlke/ha-cip-panel",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/pdehlke/ha-cip-panel/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

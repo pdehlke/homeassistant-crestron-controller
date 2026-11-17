@@ -1,0 +1,38 @@
+# A join map for a program with no gated subsystems: every join is live as
+# soon as Home Assistant registers. All join numbers here are invented.
+version: 1
+
+never_write:
+  digital: []
+
+entities:
+  # A toggle button with feedback on the same join. The common case.
+  - type: light
+    name: Hall Pendants
+    feedback: 121
+
+  # One load that appears on two panel pages: 122 and 34 both report it.
+  - type: light
+    name: Porch
+    feedback: 122
+    also_reports: [34]
+
+  # Separate on and off buttons, with the off button doubling as feedback.
+  - type: light
+    name: Pantry
+    press: on_off
+    feedback: 129
+    on_join: 127
+    off_join: 129
+    brightness: {join: 122, writable: false}
+
+  # A scene or macro: a press and nothing else.
+  - type: button
+    name: All Off
+    join: 60
+
+  # Something read-only.
+  - type: binary_sensor
+    name: Garage Door Open
+    join: 70
+    device_class: garage_door

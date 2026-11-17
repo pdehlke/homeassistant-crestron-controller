@@ -1,0 +1,42 @@
+# A join map for a program that gates subsystems behind home-page buttons, and
+# that shares a block of digital joins with an alarm keypad. All join numbers
+# here are invented. Read docs/configuration/subsystem-gating.md and
+# docs/configuration/write-safety.md before adapting it.
+version: 1
+
+subsystems:
+  default: lights
+  idle_return_seconds: 5
+  repoll_after_entry: true
+  entries:
+    lights: {join: 40, quiet_seconds: 0.5}
+    audio: {join: 41, quiet_seconds: 0.85}
+
+never_write:
+  # The alarm keypad page reuses these joins. Its entry button is listed too,
+  # so nothing can ever put this slot into the alarm subsystem.
+  digital: ["200-219", 45]
+
+entities:
+  - type: light
+    name: Breakfast Nook
+    feedback: 301
+
+  # This load's only button on the kitchen page sits inside the alarm block
+  # (join 218), so the map uses its alias on another page instead and lists
+  # the forbidden one only as something that reports state.
+  - type: light
+    name: Mud Room
+    feedback: 302
+    also_reports: [327, 218]
+
+  - type: sensor
+    name: Audio Zone Name
+    subsystem: audio
+    serial: 11
+
+  - type: sensor
+    name: Audio Zone Volume
+    subsystem: audio
+    analog: 11
+    scale: percent
