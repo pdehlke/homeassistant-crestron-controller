@@ -67,10 +67,12 @@ async def test_an_undefined_ipid_is_reported_by_kind(processor):
 
 
 async def test_probe_distinguishes_the_ways_a_first_connection_fails(processor):
-    assert await cip.async_probe("127.0.0.1", 0x2A, processor.port) == cip.PROBE_OK
-    assert await cip.async_probe("127.0.0.1", 0x30, processor.port) == cip.ERROR_IPID_MISSING
+    assert (await cip.async_probe("127.0.0.1", 0x2A, processor.port)).ok
+    missing = await cip.async_probe("127.0.0.1", 0x30, processor.port)
+    assert missing.result == cip.ERROR_IPID_MISSING
     await processor.stop()
-    assert await cip.async_probe("127.0.0.1", 0x2A, processor.port, 1) == cip.ERROR_UNREACHABLE
+    gone = await cip.async_probe("127.0.0.1", 0x2A, processor.port, 1)
+    assert gone.result == cip.ERROR_UNREACHABLE
 
 
 async def test_gated_link_in_listen_only_mode_presses_nothing_and_claims_nothing(processor):

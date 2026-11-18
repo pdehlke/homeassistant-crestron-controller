@@ -49,7 +49,22 @@ to find out which processor a control point belongs to.
 ### CIP
 
 Crestron-IP, the TCP protocol on port 41794 that touch panels use to talk to a processor. Crestron
-Controller speaks plain CIP only; authenticated and encrypted CIP (port 41796) are not supported.
+Controller speaks plain CIP, and encrypted CIP (CIP inside TLS, port 41796) though that has not
+been verified on real hardware. Authenticated CIP, which needs a username and password, is not
+supported.
+
+### TLS
+
+The encryption standard behind encrypted CIP, and the same one web browsers use for `https`
+websites. It comes in versions: 1.2 and 1.3 are current, while 1.0 and 1.1 are older and weaker.
+Crestron Controller uses 1.2 or newer unless you turn on the older-encryption setting for a
+processor. See [encrypted CIP](../configuration/encrypted-cip.md).
+
+### Certificate
+
+A processor's digital ID card, which it shows whenever something connects over encrypted CIP. Its
+fingerprint is a long string unique to that certificate. Home Assistant remembers the fingerprint
+when you set up a processor and refuses to connect if it changes.
 
 ### CTP console
 

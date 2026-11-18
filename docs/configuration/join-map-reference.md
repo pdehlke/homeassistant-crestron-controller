@@ -111,7 +111,8 @@ have measured a reason to change something. Each value must be a positive number
 | `entry_timeout` | `3.0` | How long to wait for an entry dump before declaring the entry failed. | Entry dumps on that system landed in 0.514 to 0.529 seconds, and the slowest dump of any kind measured was the 0.964 second registration dump, so this is generous. |
 | `repoll_timeout` | `5.0` | How long to wait for the end marker after a re-poll. On timeout, whatever arrived is still merged. | A re-poll on that system took about 0.86 seconds for 149 frames, three times running. |
 | `bringup_retry_seconds` | `5.0` | The minimum time between bring-up attempts when an entry fails. | A rate limit, not a measurement: a failed entry produces no traffic, which would otherwise qualify the link for another attempt immediately. |
-| `connect_timeout` | `10.0` | How long to wait for the TCP connection to the processor to open. | A chosen value, not a measurement. |
+| `connect_timeout` | `10.0` | How long to wait for the TCP connection to the processor to open, including the TLS handshake on an encrypted link. | A chosen value, not a measurement. |
+| `greeting_timeout` | `5.0` | How long to wait, once connected, for the processor's first message before giving up. | Every processor observed sends its register request as soon as a client connects. Silence usually means one end expects TLS and the other does not. |
 
 The reconnect backoff is fixed and cannot be set here: 1, 2, 5, 10, then 30 seconds between
 attempts, staying at 30. It starts again from 1 second after any session that reached synced, so a

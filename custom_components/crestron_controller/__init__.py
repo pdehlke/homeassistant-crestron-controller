@@ -28,8 +28,11 @@ from .cipcore import client as cip
 from .cipcore.joinmap import JoinMap, JoinMapError, parse
 from .const import (
     CONF_ALLOW_WRITES,
+    CONF_FINGERPRINT,
     CONF_IPID,
     CONF_JOIN_MAP,
+    CONF_LEGACY_TLS,
+    CONF_TLS,
     DISPLACEMENT_REPAIR_COUNT,
     DOMAIN,
     HEALTH_CHECK_INTERVAL,
@@ -92,6 +95,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: CrestronControllerConfig
         ipid=entry.data[CONF_IPID],
         joinmap=joinmap,
         writes_enabled=entry.options.get(CONF_ALLOW_WRITES, False),
+        # Entries created before TLS support have neither key and stay plain.
+        tls=entry.data.get(CONF_TLS, False),
+        legacy_tls=entry.data.get(CONF_LEGACY_TLS, False),
+        pinned_fingerprint=entry.data.get(CONF_FINGERPRINT),
     )
     await hub.async_start()
     health = entry.async_create_background_task(
@@ -129,7 +136,14 @@ ISSUE_UNREACHABLE = "unreachable"
 ISSUE_IPID_MISSING = "ipid_missing"
 ISSUE_REFUSED = "refused"
 ISSUE_DISPLACED = "displaced"
-_ISSUES = (ISSUE_UNREACHABLE, ISSUE_IPID_MISSING, ISSUE_REFUSED, ISSUE_DISPLACED)
+ISSUE_CERT_CHANGED = "cert_changed"
+_ISSUES = (
+    ISSUE_UNREACHABLE,
+    ISSUE_IPID_MISSING,
+    ISSUE_REFUSED,
+    ISSUE_DISPLACED,
+    ISSUE_CERT_CHANGED,
+)
 
 
 def _issue_id(entry: ConfigEntry, issue: str) -> str:
@@ -155,6 +169,8 @@ def evaluate_health(hub: Hub, now: float) -> set[str]:
         issues.add(ISSUE_IPID_MISSING)
     elif kind == cip.ERROR_REFUSED:
         issues.add(ISSUE_REFUSED)
+    elif kind == cip.ERROR_CERT_CHANGED:
+        issues.add(ISSUE_CERT_CHANGED)
     since = client.disconnected_since
     if since is not None and now - since >= UNREACHABLE_REPAIR_SECONDS:
         issues.add(ISSUE_UNREACHABLE)

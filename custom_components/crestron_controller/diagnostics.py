@@ -19,6 +19,11 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry) -> dict
         "link": {
             "host": client.host,
             "port": client.port,
+            "tls": client.tls,
+            "legacy_tls": client.legacy_tls,
+            "tls_version": client.tls_version,
+            "pinned_fingerprint": client.pinned_fingerprint,
+            "peer_fingerprint": client.peer_fingerprint,
             "ipid": f"0x{client.ipid:02X}",
             "connected": client.connected,
             "synced": client.synced,

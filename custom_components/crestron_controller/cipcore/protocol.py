@@ -18,6 +18,8 @@ hardware, and the analog and serial *writes* were not.
 from __future__ import annotations
 
 CIP_PORT = 41794
+# The same frames inside TLS. See docs/adr/0011-cip-over-tls-with-a-pinned-certificate.md.
+CIP_TLS_PORT = 41796
 
 # Packet types, as the first byte of a frame.
 TYPE_REGISTER = 0x01

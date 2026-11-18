@@ -14,6 +14,12 @@ before each write, and files every join it receives under the subsystem that
 reported it. On a program with no gating none of that machinery does anything.
 See docs/concepts/subsystems.md.
 
+CIP over TLS carries the same frames inside a TLS stream. Processors present
+self-signed certificates, so the client does not verify them against any
+authority; it pins the certificate's SHA-256 fingerprint instead and refuses a
+processor whose certificate has changed. See
+docs/adr/0011-cip-over-tls-with-a-pinned-certificate.md.
+
 This module imports nothing from Home Assistant, so the inventory CLI uses it
 unchanged.
 """
@@ -22,8 +28,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import logging
+import ssl
 import time
+import warnings
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -74,6 +83,10 @@ class Timing:
     repoll_timeout: float = 5.0
     bringup_retry_seconds: float = 5.0
     connect_timeout: float = 10.0
+    # A processor sends its register request (type 0F) as soon as a client
+    # connects. Silence past this means the port is not speaking plain CIP to
+    # us, most likely because it expects TLS.
+    greeting_timeout: float = 5.0
     reconnect_backoff: tuple[float, ...] = (1.0, 2.0, 5.0, 10.0, 30.0)
 
 
@@ -87,6 +100,59 @@ ERROR_IPID_MISSING = "ipid_missing"
 ERROR_REFUSED = "refused"
 ERROR_DISPLACED = "displaced"
 ERROR_CLOSED = "closed"
+ERROR_TLS = "tls_failed"
+ERROR_NO_GREETING = "no_greeting"
+ERROR_CERT_CHANGED = "cert_changed"
+
+
+class TlsHandshakeError(OSError):
+    """TCP connected but the TLS handshake on top of it did not complete."""
+
+
+def tls_context(legacy: bool = False) -> ssl.SSLContext:
+    """A client context that encrypts without checking the certificate's issuer.
+
+    Processors present self-signed certificates no authority vouches for, so
+    the check that does mean something is the fingerprint pin, done after the
+    handshake by the caller.
+
+    `legacy` also accepts TLS 1.0 and 1.1, for processors too old for 1.2. It
+    takes both settings below: OpenSSL 3 refuses the old versions at its
+    default security level even when the minimum version allows them, and
+    level 0 also admits the weak ciphers and SHA-1 certificates such processors
+    tend to use. It only works if the OpenSSL that Python was built against
+    still includes the old versions. Opt-in per link; see
+    docs/configuration/encrypted-cip.md.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    if legacy:
+        with warnings.catch_warnings():
+            # Python warns that TLS 1.0 is deprecated. Reaching old processors
+            # is the whole point of this setting, and the user chose it.
+            warnings.simplefilter("ignore", DeprecationWarning)
+            context.minimum_version = ssl.TLSVersion.TLSv1
+        context.set_ciphers("DEFAULT:@SECLEVEL=0")
+    return context
+
+
+def fingerprint(writer: asyncio.StreamWriter) -> str | None:
+    """SHA-256 of the peer's certificate as colon-separated hex, or None on plain TCP."""
+    tls = writer.get_extra_info("ssl_object")
+    der = tls.getpeercert(binary_form=True) if tls else None
+    if not der:
+        return None
+    return ":".join(f"{b:02X}" for b in hashlib.sha256(der).digest())
+
+
+def same_fingerprint(a: str, b: str) -> bool:
+    """Compare fingerprints however they were written: case, colons and spaces ignored."""
+
+    def norm(text: str) -> str:
+        return "".join(c for c in text.lower() if c in "0123456789abcdef")
+
+    return norm(a) == norm(b)
 
 
 class CipClient:
@@ -99,6 +165,9 @@ class CipClient:
         ipid: int,
         *,
         port: int = p.CIP_PORT,
+        tls: bool = False,
+        legacy_tls: bool = False,
+        pinned_fingerprint: str | None = None,
         subsystems: dict[str, Subsystem] | None = None,
         default_subsystem: str | None = None,
         repoll_after_entry: bool = True,
@@ -112,6 +181,14 @@ class CipClient:
         self.name = name
         self.host = host
         self.port = port
+        self.tls = tls
+        # None on a TLS link accepts any certificate. The integration always
+        # pins one, from the probe that created the entry; the CLI does not.
+        self.pinned_fingerprint = pinned_fingerprint
+        self.legacy_tls = legacy_tls
+        self.peer_fingerprint: str | None = None
+        # The TLS version the last session agreed on, such as "TLSv1.2".
+        self.tls_version: str | None = None
         self.ipid = ipid
         self.subsystems = dict(subsystems or {})
         if default_subsystem is not None and default_subsystem not in self.subsystems:
@@ -291,12 +368,32 @@ class CipClient:
     async def _session(self) -> None:
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port), self.timing.connect_timeout
+                _open(self.host, self.port, self.tls, self.timing.connect_timeout, self.legacy_tls),
+                self.timing.connect_timeout,
             )
+        except TlsHandshakeError as err:
+            raise self._fail(
+                ERROR_TLS,
+                f"TLS handshake with {self.host}:{self.port} failed ({err}); the port may "
+                "speak plain CIP, or the processor may need old TLS turned on",
+            ) from err
         except (OSError, TimeoutError) as err:
             raise self._fail(
                 ERROR_UNREACHABLE, f"cannot reach {self.host}:{self.port} ({err or 'timeout'})"
             ) from err
+        if self.tls:
+            self.peer_fingerprint = fingerprint(writer)
+            self.tls_version = _tls_version(writer)
+            if self.pinned_fingerprint and not (
+                self.peer_fingerprint
+                and same_fingerprint(self.peer_fingerprint, self.pinned_fingerprint)
+            ):
+                writer.close()
+                raise self._fail(
+                    ERROR_CERT_CHANGED,
+                    f"{self.host}:{self.port} presented certificate {self.peer_fingerprint}, "
+                    f"expected {self.pinned_fingerprint}",
+                )
         self._writer = writer
         self.connected = True
         self.synced = False
@@ -314,7 +411,8 @@ class CipClient:
         self._last_rx = loop.time()
         self._last_data_rx = loop.time()
         self._last_bringup = 0.0
-        last_beat = loop.time()
+        connected_at = last_beat = loop.time()
+        greeted = False
         buf = b""
 
         while self._running:
@@ -326,7 +424,10 @@ class CipClient:
                 raise self._fail(ERROR_CLOSED, "processor closed the connection")
             if chunk:
                 self._last_rx = loop.time()
+                greeted = True
                 buf += chunk
+            elif not greeted and loop.time() - connected_at > self.timing.greeting_timeout:
+                raise self._fail(ERROR_NO_GREETING, _no_greeting(self.host, self.port, self.tls))
 
             frames, buf = p.split_frames(buf)
             for ciptype, payload in frames:
@@ -704,13 +805,65 @@ class CipClient:
 PROBE_OK = "ok"
 
 
-async def async_probe(host: str, ipid: int, port: int = p.CIP_PORT, timeout: float = 10.0) -> str:
+@dataclass(frozen=True)
+class Probe:
+    """How a probe went: PROBE_OK or an ERROR_* kind, and the certificate seen over TLS."""
+
+    result: str
+    fingerprint: str | None = None
+    tls_version: str | None = None
+
+    @property
+    def ok(self) -> bool:
+        return self.result == PROBE_OK
+
+
+async def _open(
+    host: str, port: int, tls: bool, timeout: float, legacy: bool = False
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    reader, writer = await asyncio.open_connection(host, port)
+    if not tls:
+        return reader, writer
+    # Connect first, then upgrade, so a failure can be pinned on TLS. A peer
+    # that cannot agree a TLS version often just resets the connection, which
+    # would otherwise read as nothing listening.
+    try:
+        await writer.start_tls(tls_context(legacy), ssl_handshake_timeout=timeout)
+    except OSError as err:
+        writer.close()
+        raise TlsHandshakeError(str(err) or type(err).__name__) from err
+    return reader, writer
+
+
+def _tls_version(writer: asyncio.StreamWriter) -> str | None:
+    tls = writer.get_extra_info("ssl_object")
+    return tls.version() if tls else None
+
+
+def _no_greeting(host: str, port: int, tls: bool) -> str:
+    if tls:
+        return f"{host}:{port} completed TLS but sent no CIP register request"
+    return f"{host}:{port} sent no CIP register request; the port may expect TLS"
+
+
+async def async_probe(
+    host: str,
+    ipid: int,
+    port: int = p.CIP_PORT,
+    timeout: float = 10.0,
+    *,
+    tls: bool = False,
+    legacy_tls: bool = False,
+    pinned_fingerprint: str | None = None,
+    greeting_timeout: float = Timing.greeting_timeout,
+) -> Probe:
     """Register once, report how it went, and disconnect. Presses nothing.
 
-    Used by the config flow and the CLI to turn the three ways a first
-    connection fails (nothing listening, IP-ID not in the program, refused)
-    into a message a person can act on. Returns PROBE_OK or one of the ERROR_*
-    kinds above.
+    Used by the config flow and the CLI to turn the ways a first connection
+    fails (nothing listening, IP-ID not in the program, refused, TLS on one end
+    only) into a message a person can act on. Over TLS the result carries the
+    certificate's fingerprint, which the config flow pins, and the TLS version
+    the two ends agreed on.
 
     Registering does claim the slot for a moment. If a real panel is online
     with the same IP-ID, what the processor does about two claimants is not
@@ -718,23 +871,36 @@ async def async_probe(host: str, ipid: int, port: int = p.CIP_PORT, timeout: flo
     """
     p.registration(ipid)
     try:
-        reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout)
+        reader, writer = await asyncio.wait_for(
+            _open(host, port, tls, timeout, legacy_tls), timeout
+        )
+    except TlsHandshakeError:
+        return Probe(ERROR_TLS)
     except OSError, TimeoutError:
-        return ERROR_UNREACHABLE
+        return Probe(ERROR_UNREACHABLE)
+    seen = fingerprint(writer) if tls else None
+    version = _tls_version(writer)
     try:
+        if tls and pinned_fingerprint and not (seen and same_fingerprint(seen, pinned_fingerprint)):
+            return Probe(ERROR_CERT_CHANGED, seen, version)
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
+        greeted = False
         buf = b""
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
-                return ERROR_REFUSED
+                return Probe(ERROR_REFUSED, seen, version)
+            wait = remaining if greeted else min(remaining, greeting_timeout)
             try:
-                chunk = await asyncio.wait_for(reader.read(4096), remaining)
+                chunk = await asyncio.wait_for(reader.read(4096), wait)
             except TimeoutError:
-                return ERROR_REFUSED
+                return Probe(ERROR_REFUSED if greeted else ERROR_NO_GREETING, seen, version)
+            except ssl.SSLError:
+                return Probe(ERROR_TLS, seen, version)
             if not chunk:
-                return ERROR_CLOSED
+                return Probe(ERROR_CLOSED, seen, version)
+            greeted = True
             frames, buf = p.split_frames(buf + chunk)
             for ciptype, payload in frames:
                 if ciptype == p.TYPE_REGISTER_REQUEST:
@@ -742,12 +908,12 @@ async def async_probe(host: str, ipid: int, port: int = p.CIP_PORT, timeout: flo
                     await writer.drain()
                 elif ciptype == p.TYPE_REGISTER_RESULT:
                     if len(payload) == 4 and payload[:3] == b"\x00\x00\x00":
-                        return PROBE_OK
+                        return Probe(PROBE_OK, seen, version)
                     if payload == p.IPID_MISSING:
-                        return ERROR_IPID_MISSING
-                    return ERROR_REFUSED
+                        return Probe(ERROR_IPID_MISSING, seen, version)
+                    return Probe(ERROR_REFUSED, seen, version)
                 elif ciptype == p.TYPE_DISCONNECT:
-                    return ERROR_DISPLACED
+                    return Probe(ERROR_DISPLACED, seen, version)
     finally:
         writer.close()
         with contextlib.suppress(OSError):

@@ -15,7 +15,7 @@ panel slot see and do.
 | A load does not appear on any panel page | If no panel button or feedback join exists for it, there is nothing to map. On the system this was developed on, one keypad button switched a load through a join that no panel slot on either processor could see; reaching it would have needed new program logic. | None from this project. |
 | The program does not send feedback for a load to panels | Without feedback, toggle and on_off entities cannot work. | Map it as `press: momentary`, which is assumed state. |
 | Devices that are not on the network | Cresnet keypads, dimmer modules and other bus devices are reached only through the processor's program. | Map their effect through panel joins, as usual. |
-| A processor that requires authenticated CIP, or encrypted CIP on port 41796 | Only plain CIP on port 41794 is implemented. | The setup form reports a refused registration. No workaround in this version. |
+| A processor that requires authenticated CIP (a username and password) | Only plain and encrypted CIP are implemented, without authentication. | The setup form reports a refused registration. No workaround in this version. |
 
 ## Not built in version 1
 
@@ -38,6 +38,7 @@ panel slot see and do.
 | --- | --- |
 | Analog writes (writable brightness, writable `number`) | The encoding comes from [klenae/python-cipclient](https://github.com/klenae/python-cipclient) and matches that client, but no processor in this project has been seen to accept one: the analog joins on the system this was developed on were feedback only. |
 | Serial writes | Encoded the same way and equally unverified. No entity type writes serials in this version. |
+| Encrypted CIP (TLS, port 41796) | Tested only against the simulated processor in the test suite. Which TLS versions real processors offer is unknown. TLS 1.0 and 1.1 work only with the [older encryption](../configuration/encrypted-cip.md#older-processors) setting on, and only where Home Assistant's Python still includes them. If you have a processor that requires encrypted CIP, running `crestron-controller listen --tls` and reporting the result in an issue would settle it. See [ADR 0011](../adr/0011-cip-over-tls-with-a-pinned-certificate.md). |
 | Console login in the command-line tool | Implemented, but untested against a processor that actually asks for a password. Both consoles on the system this was developed on had none. |
 | Two clients on one IP-ID | Unknown. See [IP-ID conflicts](./ip-id-conflicts.md). |
 | Panel project files other than TSW x52 `Environment.xml` | `crestron-controller panel parse` reads only the x52 format. Newer panels (x60, x70) use HTML5 project archives, and older panels use other formats; both are detected and refused. See [panel project files](../inventory/panel-project-files.md). |

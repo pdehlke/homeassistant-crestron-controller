@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0011 for TLS; authentication is still unsupported
 ---
 
 # Plain CIP only for now

@@ -9,7 +9,9 @@ client has to get right:
   menu, and pressing it sends that subsystem's dump with no end marker;
 - partial entry dumps, by leaving chosen joins out of the entry dump;
 - toggle buttons whose feedback flips on the rising edge of a press;
-- a processor that ends the session, and one that never answers a re-poll.
+- a processor that ends the session, and one that never answers a re-poll;
+- CIP over TLS, with a throwaway self-signed certificate like the ones
+  processors present.
 
 Every write the client sends is recorded so tests can assert exactly what went
 on the wire.
@@ -19,11 +21,61 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import datetime
+import functools
+import hashlib
+import ssl
+import tempfile
+import warnings
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from cipcore import protocol as p
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 
 MENU = None
+
+
+@functools.cache
+def self_signed_certificate() -> tuple[bytes, bytes]:
+    """A throwaway (certificate, key) pair in PEM, made once per test run."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "fake-processor")])
+    now = datetime.datetime.now(datetime.UTC)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(days=1))
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    return (
+        cert.public_bytes(serialization.Encoding.PEM),
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ),
+    )
+
+
+def _server_context() -> tuple[ssl.SSLContext, str]:
+    cert_pem, key_pem = self_signed_certificate()
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    # load_cert_chain reads only from files.
+    with tempfile.TemporaryDirectory() as tmp:
+        cert_file, key_file = Path(tmp, "cert.pem"), Path(tmp, "key.pem")
+        cert_file.write_bytes(cert_pem)
+        key_file.write_bytes(key_pem)
+        context.load_cert_chain(cert_file, key_file)
+    der = ssl.PEM_cert_to_DER_cert(cert_pem.decode())
+    return context, ":".join(f"{b:02X}" for b in hashlib.sha256(der).digest())
 
 
 @dataclass
@@ -45,6 +97,9 @@ class FakeProcessor:
     courtesy: dict[int, tuple[str, int]] = field(default_factory=dict)
     answer_repoll: bool = True
     entry_gap: float = 0.0
+    tls: bool = False
+    # Serve only this TLS version and older, like a processor too old for 1.2.
+    tls_max_version: ssl.TLSVersion | None = None
 
     presses: list[int] = field(default_factory=list)
     releases: list[int] = field(default_factory=list)
@@ -58,10 +113,20 @@ class FakeProcessor:
         self._writers: list[asyncio.StreamWriter] = []
         self.slot_subsystem: str | None = None
         self.connections = 0
+        # SHA-256 of the certificate served over TLS, in the client's format.
+        self.fingerprint: str | None = None
 
     # ---- server ------------------------------------------------------------
 
     async def start(self) -> int:
+        if self.tls:
+            self._context, self.fingerprint = _server_context()
+            if self.tls_max_version is not None:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", DeprecationWarning)
+                    self._context.minimum_version = ssl.TLSVersion.TLSv1
+                    self._context.maximum_version = self.tls_max_version
+                self._context.set_ciphers("DEFAULT:@SECLEVEL=0")
         self._server = await asyncio.start_server(self._serve, "127.0.0.1", 0)
         return self._server.sockets[0].getsockname()[1]
 
@@ -86,6 +151,11 @@ class FakeProcessor:
         self.slot_subsystem = None
         self._writers.append(writer)
         try:
+            if self.tls:
+                # Upgraded here rather than in start_server so that a client
+                # hanging up mid-handshake lands in the except below instead of
+                # the event loop's exception handler.
+                await writer.start_tls(self._context)
             writer.write(p.frame(p.TYPE_REGISTER_REQUEST, b"\x00\x00\x00\x00"))
             await writer.drain()
             buf = b""

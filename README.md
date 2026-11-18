@@ -64,6 +64,8 @@ order.
 - [Multiple processors](./docs/configuration/multiple-processors.md): one link per processor, and
   choosing which processor to reach a load through.
 - [Dashboards](./docs/configuration/dashboards.md): an example dashboard using built-in cards.
+- [Encrypted CIP](./docs/configuration/encrypted-cip.md): turning on encryption, how Home Assistant
+  recognises your processor's certificate, and the older-encryption setting for old processors.
 
 ## Troubleshooting
 
@@ -73,8 +75,9 @@ order.
   sensor and the repairs Home Assistant raises for a link.
 - [IP-ID conflicts](./docs/troubleshooting/ip-id-conflicts.md): what is and is not known about two
   clients on one IP-ID.
-- [Unsupported systems](./docs/troubleshooting/unsupported-systems.md): authenticated and encrypted
-  CIP, newer panel project formats, and how to tell if your system is affected.
+- [Unsupported systems](./docs/troubleshooting/unsupported-systems.md): authenticated CIP,
+  unverified encrypted CIP, newer panel project formats, and how to tell if your system is
+  affected.
 
 ## Case study: the house this came from
 
@@ -128,11 +131,14 @@ order.
 - [0007: No join scanning in the CLI](./docs/adr/0007-no-join-scanning-in-the-cli.md): why the most
   obvious discovery tool is left out.
 - [0008: Plain CIP only for now](./docs/adr/0008-plain-cip-only-for-now.md): authentication and TLS
-  deferred until they can be tested.
+  deferred until they can be tested. Superseded by 0011 for TLS.
 - [0009: Cursor-zone audio deferred](./docs/adr/0009-cursor-zone-audio-deferred.md): a pattern, not
   yet a feature.
 - [0010: MIT licence and a fresh history](./docs/adr/0010-mit-license-and-fresh-history.md): licence
   choice and why the private history stays private.
+- [0011: CIP over TLS with a pinned
+  certificate](./docs/adr/0011-cip-over-tls-with-a-pinned-certificate.md): encrypted CIP, and why
+  the certificate is pinned rather than unchecked. Supersedes 0008 for TLS.
 
 ## Project
 

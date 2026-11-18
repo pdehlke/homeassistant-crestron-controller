@@ -43,6 +43,10 @@ class Hub:
         ipid: int,
         joinmap: JoinMap,
         writes_enabled: bool,
+        *,
+        tls: bool = False,
+        legacy_tls: bool = False,
+        pinned_fingerprint: str | None = None,
     ) -> None:
         self.name = name
         self.joinmap = joinmap
@@ -52,6 +56,9 @@ class Hub:
             host,
             ipid,
             port=port,
+            tls=tls,
+            legacy_tls=legacy_tls,
+            pinned_fingerprint=pinned_fingerprint,
             subsystems=joinmap.subsystems,
             default_subsystem=joinmap.default_subsystem,
             repoll_after_entry=joinmap.repoll_after_entry,

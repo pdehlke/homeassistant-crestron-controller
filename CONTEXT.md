@@ -29,6 +29,15 @@ as. "Borrowing a slot" means registering as an IP-ID whose real device is unplug
 installed.
 
 **CIP**: Crestron-IP, the TCP protocol on port 41794 that panels use to talk to processors.
+**Encrypted CIP** is the same frames inside TLS, on port 41796 by default. **Authenticated CIP**
+adds a username and password and is not supported.
+
+**Older encryption** (`legacy_tls`): a per-link opt-in that also accepts TLS 1.0 and 1.1, for
+processors too old for 1.2. Never a fallback the client takes on its own.
+
+**Certificate pin**: the SHA-256 fingerprint of a processor's TLS certificate, stored in the config
+entry when it is created or reconfigured. An encrypted link refuses a processor whose certificate
+no longer matches.
 
 **CTP console**: the processor's and panel's text console, on port 41795 (and telnet on 23).
 Used read-only by the CLI for `VER`, `IPTABLE` and file retrieval.
@@ -98,6 +107,9 @@ feedback first, pressing only on a mismatch, and waiting for confirmation.
 **Displacement**: the processor ending our session with a disconnect frame. Repeated
 displacement may mean another device is using the IP-ID; this project has not established how
 processors behave with two claimants, so it is a lead, not a diagnosis.
+
+**Greeting**: the register request (type 0F) a processor sends as soon as a client connects. No
+greeting within `greeting_timeout` usually means one end expects TLS and the other does not.
 
 **Synced**: registered, the dump received, and the default subsystem entered where there is one.
 Entities only report state once their link is synced and their subsystem has been entered.

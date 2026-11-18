@@ -16,7 +16,11 @@ All byte values below are hexadecimal. Joins are numbered from 1 in every docume
 API in this project, as Crestron join maps are; on the wire they are 0-based, so join 24 travels as
 `17`.
 
-Only plain CIP is covered. Authenticated or TLS CIP (port 41796) is not supported; see
+CIP over TLS (port 41796 by default) carries exactly these frames inside a TLS stream. It is
+implemented, not verified on real hardware: it has been tested only against the fake processor in
+the test suite. The certificate is pinned by its SHA-256 fingerprint; see
+[ADR 0011](../adr/0011-cip-over-tls-with-a-pinned-certificate.md). Authenticated CIP (username and
+password, packet types `0B` and `0C`) is not supported; see
 [ADR 0008](../adr/0008-plain-cip-only-for-now.md).
 
 ## What was observed and what was not

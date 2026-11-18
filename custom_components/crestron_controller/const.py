@@ -7,6 +7,13 @@ DOMAIN = "crestron_controller"
 CONF_IPID = "ipid"
 CONF_JOIN_MAP = "join_map"
 CONF_ALLOW_WRITES = "allow_writes"
+CONF_TLS = "tls"
+# Also accept TLS 1.0 and 1.1, for processors too old for 1.2. Off unless the
+# user turns it on. See docs/configuration/encrypted-cip.md.
+CONF_LEGACY_TLS = "legacy_tls"
+# The SHA-256 of the processor's TLS certificate, pinned when the entry was
+# created or last reconfigured. See docs/adr/0011-cip-over-tls-with-a-pinned-certificate.md.
+CONF_FINGERPRINT = "fingerprint"
 
 DEFAULT_JOIN_MAP_DIR = "crestron_controller"
 

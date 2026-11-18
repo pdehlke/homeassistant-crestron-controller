@@ -8,6 +8,8 @@
           "name": "Name",
           "host": "Processor address",
           "ipid": "Panel IP-ID",
+          "tls": "Encrypted CIP (TLS)",
+          "legacy_tls": "Allow older encryption (TLS 1.0 and 1.1)",
           "port": "CIP port",
           "join_map": "Join map file"
         },
@@ -15,17 +17,26 @@
           "name": "A label for this processor, such as Main processor or Audio distribution.",
           "host": "The control processor's IP address or DNS name. This is the processor the touch panel talks to, not the panel itself.",
           "ipid": "The IP-ID of a panel slot the program defines and nothing else is using, in hex as Crestron writes it (for example 0x2A or 2A).",
-          "port": "Leave at 41794 unless you know your processor uses another.",
+          "tls": "Turn on if the processor requires encrypted (secure) CIP. Home Assistant remembers the processor's certificate when you save and refuses to connect if it changes. Encrypted CIP has been tested only against a simulated processor so far.",
+          "legacy_tls": "Only for old processors that cannot use modern encryption. Leave off unless setup fails with an encryption error and you know your processor is old. The older encryption is weaker. Has no effect unless encrypted CIP is on.",
+          "port": "Leave blank for the standard port: 41794, or 41796 with encrypted CIP on. Fill it in only if your processor uses another.",
           "join_map": "Path under your config folder. Leave blank to create crestron_controller/<name>.yaml with a starter template."
         }
       },
       "reconfigure": {
         "title": "Change the processor address or IP-ID",
-        "description": "Use this if the processor moved to a new address or you switched to another panel slot. Entities and their history are kept. Home Assistant registers once to check the new settings and presses nothing.",
+        "description": "Use this if the processor moved to a new address, you switched to another panel slot, or the processor's encryption certificate changed. Entities and their history are kept. Home Assistant registers once to check the new settings and presses nothing. With encrypted CIP on, the certificate the processor presents now is the one remembered from here on.",
         "data": {
           "host": "Processor address",
           "ipid": "Panel IP-ID",
+          "tls": "Encrypted CIP (TLS)",
+          "legacy_tls": "Allow older encryption (TLS 1.0 and 1.1)",
           "port": "CIP port"
+        },
+        "data_description": {
+          "tls": "Turn on if the processor requires encrypted (secure) CIP. Home Assistant remembers the processor's certificate when you save and refuses to connect if it changes. Encrypted CIP has been tested only against a simulated processor so far.",
+          "legacy_tls": "Only for old processors that cannot use modern encryption. Leave off unless setup fails with an encryption error and you know your processor is old. The older encryption is weaker. Has no effect unless encrypted CIP is on.",
+          "port": "Leave blank for the standard port: 41794, or 41796 with encrypted CIP on. Fill it in only if your processor uses another."
         }
       }
     },
@@ -34,7 +45,9 @@
       "invalid_join_map": "The join map could not be used: {detail}",
       "cannot_connect": "Nothing answered on that address and port. Check the address is the control processor and that Home Assistant can reach it.",
       "ipid_missing": "The processor answered, but its program does not define that IP-ID. Run crestron-controller ipids to list the ones it does.",
-      "refused": "The processor answered but did not accept the registration. It may require authentication or encrypted CIP, which this integration does not support yet."
+      "refused": "The processor answered but did not accept the registration. It may require a username and password, which this integration does not support.",
+      "tls_failed": "The encrypted connection could not be set up. Either the port speaks plain CIP (turn off encrypted CIP, or check the port number), or the processor is too old for modern encryption (turn on older encryption).",
+      "no_greeting": "Something answered on that port but did not speak CIP. If the processor requires encrypted CIP, turn it on; otherwise check the port number."
     },
     "abort": {
       "already_configured": "This processor and IP-ID are already set up.",
@@ -70,11 +83,15 @@
     },
     "refused": {
       "title": "{name}: the processor refused registration",
-      "description": "{host} refused IP-ID {ipid}. Last error: {error}. Processors that require authentication or encrypted CIP are not supported yet."
+      "description": "{host} refused IP-ID {ipid}. Last error: {error}. Processors that require a username and password are not supported."
     },
     "displaced": {
       "title": "{name}: the processor keeps ending the session",
       "description": "{host} has ended this link's session several times in the last ten minutes. One possible cause is another device using IP-ID {ipid}, such as a real touch panel or a second Home Assistant. This project has not established how every processor behaves when two clients claim one IP-ID, so treat this as a lead, not a diagnosis."
+    },
+    "cert_changed": {
+      "title": "{name}: the processor's certificate has changed",
+      "description": "{host} presented a different encryption certificate from the one Home Assistant remembered, so it is refusing to connect. Details: {error}.\n\nA processor that was replaced, reset or had its firmware updated may legitimately get a new certificate. If you know that happened, open Reconfigure on the integration's menu and save to accept the new certificate. If nothing changed, something else may be answering at this address; find out what before accepting it."
     }
   }
 }

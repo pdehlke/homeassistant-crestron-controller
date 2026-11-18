@@ -37,7 +37,9 @@ You need the processor's address and a free IP-ID first. If you do not have them
    | Name | A label you will recognise, such as "Main processor". It becomes the device name, and the default join map file name is made from it. |
    | Processor address | The control processor's IP address or DNS name. Not a touch panel's. |
    | Panel IP-ID | The slot to borrow, in hex as Crestron writes it (`0x2A` or `2A`), or decimal with a `d` suffix (`42d`). Must be between 03 and FE. |
-   | CIP port | Leave at 41794 unless you know otherwise. |
+   | Encrypted CIP (TLS) | Leave off unless your processor requires encrypted, also called secure, CIP. When on, Home Assistant remembers the certificate the processor presents and will refuse to connect if it ever changes. Not yet verified on a real processor. See [encrypted CIP](../configuration/encrypted-cip.md). |
+   | Allow older encryption (TLS 1.0 and 1.1) | Leave off. Turn it on only if encrypted CIP is on and setup says the encrypted connection could not be set up on an old processor. See [older processors](../configuration/encrypted-cip.md#older-processors). |
+   | CIP port | Leave blank. It means 41794, or 41796 with encrypted CIP on. |
    | Join map file | A path under your config folder. Leave blank to use `crestron_controller/<name>.yaml`. |
 
 3. Submit. The form checks the join map, creating the starter one if the file does not exist yet,

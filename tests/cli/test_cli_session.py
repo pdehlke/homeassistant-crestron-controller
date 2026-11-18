@@ -83,3 +83,50 @@ async def test_label_appends_an_entry_that_validates(tmp_path, monkeypatch):
     await session._label(target, [("digital", 121, 1), ("digital", 122, 1), ("analog", 3, 9)])
     jm = parse(yaml.safe_load(target.read_text()))
     assert [(e.name, e.join) for e in jm.entities] == [("Porch Light", 121)]
+
+
+async def test_listen_over_tls_prints_the_fingerprint(tls_processor, capsys):
+    tls_processor.digital[None] = {121: 1}
+    args = build_parser().parse_args(
+        ["listen", "127.0.0.1", "--ipid", "0x2A", "--tls", "--port", str(tls_processor.port)]
+    )
+    args.seconds = 1.0
+    assert await session._listen(args) == 0
+    out = capsys.readouterr().out
+    assert f"TLS certificate SHA-256: {tls_processor.fingerprint}" in out
+    assert "high: d121" in out
+
+
+async def test_tls_on_a_plain_port_says_so(processor, capsys):
+    args = build_parser().parse_args(
+        ["listen", "127.0.0.1", "--ipid", "0x2A", "--tls", "--port", str(processor.port)]
+    )
+    assert await session._listen(args) == 2
+    assert "TLS handshake failed" in capsys.readouterr().err
+
+
+async def test_legacy_tls_reaches_an_old_processor(old_tls_processor, capsys):
+    args = build_parser().parse_args(
+        [
+            "listen",
+            "127.0.0.1",
+            "--ipid",
+            "0x2A",
+            "--legacy-tls",
+            "--port",
+            str(old_tls_processor.port),
+        ]
+    )
+    args.seconds = 1.0
+    assert await session._listen(args) == 0
+    out = capsys.readouterr().out
+    assert "TLS version: TLSv1\n" in out
+    assert old_tls_processor.fingerprint in out
+
+
+async def test_plain_tls_against_an_old_processor_suggests_legacy(old_tls_processor, capsys):
+    args = build_parser().parse_args(
+        ["listen", "127.0.0.1", "--ipid", "0x2A", "--tls", "--port", str(old_tls_processor.port)]
+    )
+    assert await session._listen(args) == 2
+    assert "--legacy-tls" in capsys.readouterr().err

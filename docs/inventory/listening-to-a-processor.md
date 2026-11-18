@@ -22,7 +22,9 @@ crestron-controller listen 10.0.0.20 --ipid 0x31 --json joins.json --draft draft
 | --- | --- |
 | `HOST` | The control processor's address. Not a touch panel's. |
 | `--ipid ID` | The slot to register as, in hex (`0x31` or `31`). A trailing `d` means decimal (`49d`). Must be between 03 and FE. |
-| `--port PORT` | The CIP port. Default 41794. |
+| `--port PORT` | The CIP port. Default 41794, or 41796 with `--tls`. |
+| `--tls` | Speak encrypted CIP (CIP inside TLS). Prints the TLS version agreed and the processor's certificate fingerprint before anything else. It accepts whatever certificate the processor presents. Not yet verified on a real processor. See [encrypted CIP](../configuration/encrypted-cip.md). |
+| `--legacy-tls` | The same as `--tls`, but also allows the older TLS 1.0 and 1.1 that some old processors need. |
 | `--seconds N` | How long to listen. Default 20. |
 | `--json FILE` | Write every observed join to this file. |
 | `--draft FILE` | Write a draft join map to this file. |
@@ -45,7 +47,9 @@ IP-ID followed by one of these, and exits with status 2:
 | --- | --- |
 | `nothing answered. Is this the control processor's address?` | Nothing accepted a connection on that address and port. |
 | `the program does not define that IP-ID. Try crestron-controller ipids.` | The processor answered and refused this IP-ID. Check it is in hex. |
-| `registration refused. Authenticated or encrypted CIP is not supported.` | The processor answered and refused for another reason. |
+| `registration refused. Authenticated CIP (username and password) is not supported.` | The processor answered and refused for another reason. |
+| `the TLS handshake failed. The port may speak plain CIP (try without --tls), or the processor may be too old for TLS 1.2 (try --legacy-tls).` | You asked for `--tls`, and the two sides could not agree on encryption. |
+| `connected, but no CIP greeting arrived. If the processor requires encrypted CIP, add --tls.` | Something accepted the connection but sent nothing within five seconds. A processor waiting for a TLS handshake behaves this way. |
 
 Other short codes (`displaced`, `closed`) can appear if the processor ended the connection during
 the check.

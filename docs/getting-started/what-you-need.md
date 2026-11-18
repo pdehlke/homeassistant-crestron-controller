@@ -10,7 +10,7 @@ optional. If a word here is new, the [glossary](../concepts/glossary.md) explain
 | Home Assistant 2026.10.0 or newer | The integration is tested against 2026.10.4 and declares 2026.10.0 as its minimum in `hacs.json`. | Settings > About in Home Assistant. |
 | A Crestron control processor that Home Assistant can reach on TCP port 41794 | Home Assistant talks to the [control processor](../concepts/glossary.md#control-processor), the box that runs the program, using CIP, the same protocol the touch panels use. | [Finding your control processor](./finding-your-control-processor.md). |
 | A free panel IP-ID on that processor | Home Assistant registers as one of the processor's touch panels, so the program must already define a panel slot that nothing else is using. You cannot add one without reprogramming the processor. | [Choosing an IP-ID](./choosing-an-ip-id.md). |
-| A processor that accepts plain CIP | Authenticated CIP and encrypted CIP (port 41796) are not supported in this version. | The setup form reports a refused registration. See [unsupported systems](../troubleshooting/unsupported-systems.md). |
+| A processor that accepts plain or encrypted CIP without a username and password | Authenticated CIP is not supported in this version. Encrypted CIP (port 41796) is supported but has not been verified on a real processor. | The setup form reports a refused registration. See [unsupported systems](../troubleshooting/unsupported-systems.md). |
 | Knowledge of which joins must never be pressed | Some programs share join numbers between lights and an alarm keypad, a gate or a garage door. Nothing on the wire says which. You list those joins before turning writes on. | [Write safety](../configuration/write-safety.md). |
 
 One processor is one link and one config entry. A house with two processors needs two of each, and
@@ -39,8 +39,9 @@ processors](../configuration/multiple-processors.md).
 
 ## What it will not do
 
-Version 1 has no `select` or `media_player` entities, does not support authenticated or encrypted
-CIP, and has never seen a processor accept the analog or serial write encodings it uses. Audio
+Version 1 has no `select` or `media_player` entities, does not support authenticated CIP, has not
+tested encrypted CIP against a real processor, and has never seen a processor accept the analog or
+serial write encodings it uses. Audio
 zones driven through a cursor are documented as a [pattern](../patterns/cursor-zone-audio.md), not
 built. The full list is in [unsupported systems](../troubleshooting/unsupported-systems.md).
 

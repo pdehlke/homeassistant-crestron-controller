@@ -5,6 +5,11 @@ its subsystems behind a home-page button, listening alone shows only the menu;
 `--enter JOIN --allow-press` presses that one join (and nothing else) so the
 subsystem's joins arrive, and measures how the entry dump is spaced so you can
 set `quiet_seconds` for it. See docs/inventory/listening-to-a-processor.md.
+
+`--tls` speaks CIP inside TLS (port 41796 by default) and prints the
+processor's certificate fingerprint and the TLS version agreed. It accepts
+whatever certificate the processor presents; the pinning lives in the
+integration. `--legacy-tls` implies `--tls` and also accepts TLS 1.0 and 1.1.
 """
 
 from __future__ import annotations
@@ -17,10 +22,10 @@ import time
 from pathlib import Path
 
 import yaml
-from cipcore.client import PROBE_OK, CipClient, Subsystem, Timing, async_probe
+from cipcore.client import CipClient, Subsystem, Timing, async_probe
 from cipcore.joinmap import JoinMapError, parse
 from cipcore.policy import DIGITAL, LISTEN_ONLY, WritePolicy
-from cipcore.protocol import CIP_PORT, DATA_DIGITAL, TYPE_DATA
+from cipcore.protocol import CIP_PORT, CIP_TLS_PORT, DATA_DIGITAL, TYPE_DATA
 
 ENTERED = "entered"
 
@@ -38,7 +43,19 @@ def _common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--ipid", type=_ipid, required=True, help="panel IP-ID in hex, e.g. 0x2A (or 42d)"
     )
-    parser.add_argument("--port", type=int, default=CIP_PORT)
+    parser.add_argument(
+        "--port", type=int, help=f"default {CIP_PORT}, or {CIP_TLS_PORT} with --tls"
+    )
+    parser.add_argument(
+        "--tls",
+        action="store_true",
+        help="encrypted CIP; prints the certificate fingerprint (not verified on real hardware)",
+    )
+    parser.add_argument(
+        "--legacy-tls",
+        action="store_true",
+        help="like --tls, but also accept the older TLS 1.0 and 1.1 that old processors may need",
+    )
     parser.add_argument(
         "--enter",
         type=int,
@@ -94,6 +111,14 @@ def _deny(text: str) -> frozenset[int]:
     return jm.never_write[DIGITAL]
 
 
+def _tls(args) -> bool:
+    return args.tls or args.legacy_tls
+
+
+def _port(args) -> int:
+    return args.port or (CIP_TLS_PORT if _tls(args) else CIP_PORT)
+
+
 def _build_client(args, on_join=None, on_frame=None) -> CipClient:
     if args.enter is not None and not args.allow_press:
         sys.exit("--enter presses a join on your system. Add --allow-press if you mean it.")
@@ -106,7 +131,9 @@ def _build_client(args, on_join=None, on_frame=None) -> CipClient:
             "cli",
             args.host,
             args.ipid,
-            port=args.port,
+            port=_port(args),
+            tls=_tls(args),
+            legacy_tls=args.legacy_tls,
             policy=LISTEN_ONLY,
             on_join=on_join,
             on_frame=on_frame,
@@ -122,7 +149,9 @@ def _build_client(args, on_join=None, on_frame=None) -> CipClient:
         "cli",
         args.host,
         args.ipid,
-        port=args.port,
+        port=_port(args),
+        tls=_tls(args),
+        legacy_tls=args.legacy_tls,
         subsystems={ENTERED: Subsystem(ENTERED, args.enter, quiet_seconds=2.0)},
         default_subsystem=ENTERED,
         policy=policy,
@@ -133,15 +162,29 @@ def _build_client(args, on_join=None, on_frame=None) -> CipClient:
 
 
 async def _preflight(args) -> bool:
-    result = await async_probe(args.host, args.ipid, args.port)
-    if result == PROBE_OK:
+    probe = await async_probe(
+        args.host, args.ipid, _port(args), tls=_tls(args), legacy_tls=args.legacy_tls
+    )
+    if probe.tls_version:
+        print(f"TLS version: {probe.tls_version}")
+    if probe.fingerprint:
+        print(f"TLS certificate SHA-256: {probe.fingerprint}")
+    if probe.ok:
         return True
     hints = {
         "unreachable": "nothing answered. Is this the control processor's address?",
         "ipid_missing": "the program does not define that IP-ID. Try `crestron-controller ipids`.",
-        "refused": "registration refused. Authenticated or encrypted CIP is not supported.",
+        "refused": "registration refused. Authenticated CIP (username and password) is not "
+        "supported.",
+        "tls_failed": "the TLS handshake failed. The port may speak plain CIP (try without "
+        "--tls), or the processor may be too old for TLS 1.2 (try --legacy-tls).",
+        "no_greeting": "connected, but no CIP greeting arrived. If the processor requires "
+        "encrypted CIP, add --tls.",
     }
-    print(f"{args.host} IP-ID 0x{args.ipid:02X}: {hints.get(result, result)}", file=sys.stderr)
+    print(
+        f"{args.host} IP-ID 0x{args.ipid:02X}: {hints.get(probe.result, probe.result)}",
+        file=sys.stderr,
+    )
     return False
 
 

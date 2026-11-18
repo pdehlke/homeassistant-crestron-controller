@@ -50,8 +50,11 @@ several runs. `dN did not produce a subsystem dump within the timeout.` means wr
 short `--seconds`.
 
 Pre-flight messages (exit 2): `nothing answered` (wrong address or unreachable), `the program does
-not define that IP-ID` (check hex; run `ipids`), `registration refused` (authenticated or TLS CIP
-is unsupported). Exit 1 with a message: `--enter` without `--allow-press`, or `--enter` on a
+not define that IP-ID` (check hex; run `ipids`), `registration refused` (authenticated CIP is
+unsupported), `the TLS handshake failed` (drop `--tls`, check the port, or try `--legacy-tls` on
+an old processor), `no CIP greeting arrived` (the port may need `--tls`). With `--tls` or
+`--legacy-tls`, the first lines printed are the TLS version agreed and the processor's certificate
+fingerprint. Exit 1 with a message: `--enter` without `--allow-press`, or `--enter` on a
 `--never-write` join.
 
 The draft: every entry read-only, names are placeholders (`Digital 17`), comments carry the value
