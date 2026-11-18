@@ -49,6 +49,7 @@ seen on a processor in this project.
 | Digital and analog joins in EXTENDED_DATA (type `12`) | processor to client | From rellis. Not observed: the development system's processors have only been seen to send serials this way. |
 | Several join records in one data frame | processor to client | From rellis. Not observed. |
 | Record types `27`, `2A` and `34` inside type `05` | processor to client | From rellis. Not observed. |
+| SmartObject joins (record types `38` and `39`) | processor to client | From rellis, which captured them from live processors. Not observed by this project. Read only; nothing writes into a SmartObject. |
 
 The analog write caveat in full: the system this was developed on had no program logic that
 accepts an analog value from a panel. Its only two analog joins were feedback-only, and two writes
@@ -142,12 +143,42 @@ The record types:
 | `27` | Digital joins, repeated. Decoded like `00`. From rellis. |
 | `2A` | Serial join, unmangled. Decoded like `15`. From rellis. |
 | `34` | Serial join, extended. Decoded like `15`. Our own serial writes use it. |
-| `38`, `39` | SmartObject joins. Skipped, with a debug log entry; see below. |
+| `38`, `39` | SmartObject joins. Read, not written; see below. From rellis. |
+
+### SmartObject joins (record types 38 and 39)
+
+Not observed by this project. The layout follows rellis-erigon/Crestron-CIP-HA, whose tests hold
+frames captured from a live processor; the code is `smart_object_records()` in `protocol.py`.
 
 SmartObject records hold joins that belong to one object on a panel page, such as a list, and are
 numbered in that object's own range: a list's serial 11 is a different signal from the program's
-serial 11. Join maps have no way to name them yet, so the client skips them rather than publishing
-them on the wrong entities.
+serial 11. The record's body is the object number, 32 bits big-endian, then one or more items:
+
+```text
+<object b3> <object b2> <object b1> <object b0>  <len> <type> <bytes ...>  <len> <type> ...
+```
+
+`<len>` is one byte and counts the type byte and what follows, unlike the 16-bit record lengths
+outside. Each item is an ordinary digital, analog or serial record, decoded as it would be outside,
+and its joins belong to the object. rellis captured one serial item per record, for example
+object 1, serial 31:
+
+```text
+05 00 16 00 00 13 38 00 00 00 01 0d 15 00 1e 03 <9 bytes of text>
+```
+
+The client treats both types alike, as rellis does. It also:
+
+- follows an item that is itself a SmartObject, giving its joins to the inner object, up to four
+  levels deep;
+- skips a record for object 0, which would otherwise land in the program's own range;
+- reads only digital, analog and serial records inside an object, so an end-of-query marker inside
+  one is never taken for the real one;
+- stops at an item whose length runs past the end of the record.
+
+SmartObject digitals arriving during an entry or re-poll are collected and merged like any other,
+under the subsystem being entered. The decision and the options rejected are in
+[ADR 0012](../adr/0012-smartobject-joins-are-their-own-namespace.md).
 
 ### Digital joins (datatype 00)
 

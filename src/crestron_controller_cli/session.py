@@ -245,7 +245,26 @@ def _snapshot(client: CipClient) -> dict:
             "analog": dict(sorted(client.analog_for(name).items())),
         }
     out["serial"] = dict(sorted(client.serial.items()))
+    objects: dict = {}
+    for obj in client.smart_objects():
+        objects[str(obj)] = {
+            "subsystems": {
+                (name or "(none)"): {
+                    "digital": dict(sorted(client.digital_for(name, obj).items())),
+                    "analog": dict(sorted(client.analog_for(name, obj).items())),
+                }
+                for name in client.buckets(obj)
+            },
+            "serial": dict(sorted(client.serial_for(obj).items())),
+        }
+    if objects:
+        out["smart_objects"] = objects
     return out
+
+
+def _joined(obj: int, letter: str, join: int) -> str:
+    """How the CLI writes a join: d5 for the program's own, o3:d5 inside SmartObject 3."""
+    return f"o{obj}:{letter}{join}" if obj else f"{letter}{join}"
 
 
 def _draft(client: CipClient, args, quiet: float | None = None) -> str:
@@ -276,6 +295,31 @@ def _draft(client: CipClient, args, quiet: float | None = None) -> str:
         shown = text.strip().replace("#", "")[:40]
         name = json.dumps(f"Serial {join}")
         lines.append(f"  - {{type: sensor, name: {name}, serial: {join}}}  # {shown!r}")
+    objects = client.smart_objects()
+    if objects:
+        lines += [
+            "  # SmartObject joins (lists on the panel). Untested on real hardware: see",
+            "  # docs/configuration/reading-lists.md before relying on these.",
+        ]
+    for obj in objects:
+        where = f"smart_object: {obj}"
+        for join, value in sorted(client.digital_for(bucket, obj).items()):
+            state = "high" if value else "low"
+            lines.append(
+                f"  - {{type: binary_sensor, name: List {obj} digital {join}, join: {join}, "
+                f"{where}}}  # {state}"
+            )
+        for join, value in sorted(client.analog_for(bucket, obj).items()):
+            lines.append(
+                f"  - {{type: sensor, name: List {obj} analog {join}, analog: {join}, "
+                f"{where}}}  # was {value}"
+            )
+        for join, text in sorted(client.serial_for(obj).items()):
+            shown = text.strip().replace("#", "")[:40]
+            name = json.dumps(f"List {obj} serial {join}")
+            lines.append(
+                f"  - {{type: sensor, name: {name}, serial: {join}, {where}}}  # {shown!r}"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -305,6 +349,12 @@ async def _listen(args) -> int:
         if high:
             print(f"  high: {', '.join(f'd{j}' for j in high)}")
     print(f"{len(snap['serial'])} serial joins")
+    for obj, data in snap.get("smart_objects", {}).items():
+        count = sum(len(b["digital"]) + len(b["analog"]) for b in data["subsystems"].values())
+        print(
+            f"SmartObject {obj}: {count} digital and analog, {len(data['serial'])} serial "
+            "(untested on real hardware)"
+        )
     if args.enter is not None:
         report = timer.report()
         if report:
@@ -329,15 +379,15 @@ def run_listen(args) -> int:
 async def _watch(args) -> int:
     if not await _preflight(args):
         return 2
-    burst: list[tuple[str, int, int | str]] = []
+    burst: list[tuple[str, int, int | str, int]] = []
     started = time.monotonic()
 
-    def on_join(kind: str, join: int, value, subsystem) -> None:
+    def on_join(kind: str, join: int, value, subsystem, obj: int = 0) -> None:
         if not client.synced:
             return  # the initial dump is state, not something you just pressed
-        letter = kind[0]
-        print(f"{time.monotonic() - started:8.2f}s  {letter}{join} = {value!r}", flush=True)
-        burst.append((kind, join, value))
+        shown = _joined(obj, kind[0], join)
+        print(f"{time.monotonic() - started:8.2f}s  {shown} = {value!r}", flush=True)
+        burst.append((kind, join, value, obj))
 
     client = _build_client(args, on_join=on_join)
     await client.async_start()
@@ -363,16 +413,19 @@ async def _watch(args) -> int:
         await client.async_stop()
 
 
-async def _label(path: Path, burst: list[tuple[str, int, int | str]]) -> None:
-    joins = sorted({j for kind, j, v in burst if kind == DIGITAL and v})
+async def _label(path: Path, burst: list[tuple[str, int, int | str, int]]) -> None:
+    # Sorted with the program's own joins first, so one of those is preferred.
+    joins = sorted({(obj, j) for kind, j, v, obj in burst if kind == DIGITAL and v})
     if not joins:
         return
-    shown = ", ".join(f"d{j}" for j in joins)
+    shown = ", ".join(_joined(obj, "d", j) for obj, j in joins)
     name = (await asyncio.to_thread(input, f"Name for {shown} (Enter to skip): ")).strip()
     if not name:
         return
     note = "" if len(joins) == 1 else f"  # also went high: {shown}"
-    entry = f"  - {{type: binary_sensor, name: {json.dumps(name)}, join: {joins[0]}}}{note}\n"
+    obj, join = joins[0]
+    where = f", smart_object: {obj}" if obj else ""
+    entry = f"  - {{type: binary_sensor, name: {json.dumps(name)}, join: {join}{where}}}{note}\n"
     with path.open("a", encoding="utf-8") as fh:
         fh.write(entry)
     print(f"appended to {path}")

@@ -174,6 +174,37 @@ async def test_diagnostics_list_every_join(hass: HomeAssistant, config_dir, proc
         await hass.config_entries.async_unload(entry.entry_id)
 
 
+LIST_MAP = (
+    JOIN_MAP
+    + """\
+  - {type: sensor, name: Source Name, serial: 5, smart_object: 3}
+  - {type: binary_sensor, name: Source Selected, join: 205, smart_object: 3}
+"""
+)
+
+
+async def test_list_entities_read_their_smart_object(hass: HomeAssistant, config_dir, processor):
+    seed(processor)
+    processor.smart_serial = {3: {5: "Item one"}}
+    processor.smart = {None: {3: {205: 0}}}
+    entry = add_entry(hass, config_dir, processor, join_map=LIST_MAP)
+    await setup(hass, entry)
+    try:
+        # Same join numbers as Now Playing and Gate Open, different values.
+        assert hass.states.get("sensor.house_now_playing").state == "Track One"
+        assert hass.states.get("sensor.house_source_name").state == "Item one"
+        assert hass.states.get("binary_sensor.house_gate_open").state == "on"
+        selected = hass.states.get("binary_sensor.house_source_selected")
+        assert selected.state == "off"
+        assert selected.attributes["smart_object"] == 3
+        await processor.push_smart_digital(None, 3, 205, 1)
+        await wait_for(lambda: hass.states.get("binary_sensor.house_source_selected").state == "on")
+        diag = await async_get_config_entry_diagnostics(hass, entry)
+        assert diag["smart_objects"]["3"]["serial"] == {5: "Item one"}
+    finally:
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_config_flow_creates_entry_and_starter_map(hass, config_dir, processor):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}

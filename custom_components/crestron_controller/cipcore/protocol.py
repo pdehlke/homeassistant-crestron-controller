@@ -14,9 +14,11 @@ docs/protocol/cip-wire-format.md; the short version is that registration,
 heartbeat, the update request and every digital encoding were observed on real
 hardware, and the analog and serial *writes* were not.
 
-The record walk in iter_records() follows rellis-erigon/Crestron-CIP-HA (MIT,
-see THIRD_PARTY_NOTICES.md). Joins of every type arriving in EXTENDED_DATA
-frames come from that project's notes and have not been observed here.
+The record walk in iter_records() and the SmartObject layout in
+smart_object_records() follow rellis-erigon/Crestron-CIP-HA (MIT, see
+THIRD_PARTY_NOTICES.md). Joins of every type arriving in EXTENDED_DATA frames,
+and SmartObject joins, come from that project's notes and have not been
+observed here.
 """
 
 from __future__ import annotations
@@ -158,6 +160,43 @@ def iter_records(ciptype: int, payload: bytes) -> list[tuple[int, bytes]]:
     if len(payload) > start + 2:
         return [(payload[start + 2], payload[start + 3 :])]
     return []
+
+
+# How deep SmartObjects may nest. No source describes more than one level; the
+# cap only stops a malformed frame from recursing until the interpreter gives up.
+_MAX_NESTING = 4
+
+
+def smart_object_records(body: bytes, _depth: int = 0) -> list[tuple[int, int, bytes]]:
+    """Cut a SmartObject record body into (object, record type, record bytes) triples.
+
+    The body is the object's number, 32 bits big-endian, then items of a
+    one-byte length (counting the type byte), the record type and its bytes.
+    An item that is itself a SmartObject is followed into, and its joins
+    belong to the inner object. A truncated item ends the walk.
+
+    The layout follows rellis-erigon/Crestron-CIP-HA's split_object_joins()
+    and has not been observed by this project. See
+    docs/adr/0012-smartobject-joins-are-their-own-namespace.md.
+    """
+    if len(body) < 4:
+        return []
+    obj = int.from_bytes(body[:4], "big")
+    out: list[tuple[int, int, bytes]] = []
+    i = 4
+    while i + 2 <= len(body):
+        length = body[i]
+        if length < 1 or i + 1 + length > len(body):
+            break
+        kind = body[i + 1]
+        record = body[i + 2 : i + 1 + length]
+        if kind in (DATA_SMART_OBJECT, DATA_SMART_OBJECT_EXTENDED):
+            if _depth < _MAX_NESTING:
+                out += smart_object_records(record, _depth + 1)
+        else:
+            out.append((obj, kind, record))
+        i += 1 + length
+    return out
 
 
 def decode_digitals(body: bytes) -> list[tuple[int, int]]:

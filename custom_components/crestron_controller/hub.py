@@ -68,7 +68,8 @@ class Hub:
             on_state=self._on_state,
         )
         self.lock = asyncio.Lock()
-        self._listeners: dict[tuple[str, int], set[Listener]] = {}
+        # (kind, join, smart object) -> listeners. Smart object 0 is ordinary joins.
+        self._listeners: dict[tuple[str, int, int], set[Listener]] = {}
         self._state_listeners: set[Listener] = set()
         # (subsystem, alias join) -> canonical feedback join. An alias moving is
         # the same event as the feedback join moving, so it is mirrored onto
@@ -104,14 +105,17 @@ class Hub:
 
     # ---- observation -------------------------------------------------------
 
-    def subscribe(self, reads: list[tuple[str, int]], callback: Listener) -> Callable[[], None]:
+    def subscribe(
+        self, reads: list[tuple[str, int]], callback: Listener, smart_object: int = 0
+    ) -> Callable[[], None]:
         """Call `callback` when any of these joins changes, or the link changes state."""
-        for key in reads:
+        keys = [(kind, join, smart_object) for kind, join in reads]
+        for key in keys:
             self._listeners.setdefault(key, set()).add(callback)
         self._state_listeners.add(callback)
 
         def _remove() -> None:
-            for key in reads:
+            for key in keys:
                 self._listeners.get(key, set()).discard(callback)
             self._state_listeners.discard(callback)
 
@@ -125,14 +129,18 @@ class Hub:
         for callback in list(self._state_listeners):
             callback()
 
-    def _on_join(self, kind: str, join: int, value: int | str, subsystem: str | None) -> None:
-        if kind == DIGITAL:
+    def _on_join(
+        self, kind: str, join: int, value: int | str, subsystem: str | None, obj: int = 0
+    ) -> None:
+        # Aliases and confirmation waiters belong to lights and switches, which
+        # never read a SmartObject.
+        if kind == DIGITAL and obj == 0:
             canonical = self._aliases.get((subsystem, join))
             if canonical is not None:
                 self.client.digital_for(subsystem)[canonical] = int(value)
                 join = canonical
             self._resolve_waiters(subsystem, join, int(value))
-        for callback in list(self._listeners.get((kind, join), ())):
+        for callback in list(self._listeners.get((kind, join, obj), ())):
             callback()
 
     @property
@@ -144,22 +152,23 @@ class Hub:
             return self.connected
         return self.client.has_state_for(entity.subsystem)
 
-    def digital(self, subsystem: str | None, join: int) -> int | None:
+    def digital(self, subsystem: str | None, join: int, obj: int = 0) -> int | None:
         if not self.client.has_state_for(subsystem):
             return None
         # A dump reports only what it reports, but after a full sync a join the
         # processor never mentioned is low on every system observed so far.
-        return self.client.digital_for(subsystem).get(join, 0)
+        # Whether that holds for SmartObject joins has not been observed.
+        return self.client.digital_for(subsystem, obj).get(join, 0)
 
-    def analog(self, subsystem: str | None, join: int) -> int | None:
+    def analog(self, subsystem: str | None, join: int, obj: int = 0) -> int | None:
         if not self.client.has_state_for(subsystem):
             return None
-        return self.client.analog_for(subsystem).get(join)
+        return self.client.analog_for(subsystem, obj).get(join)
 
-    def serial(self, join: int) -> str | None:
+    def serial(self, join: int, obj: int = 0) -> str | None:
         if not self.client.synced:
             return None
-        return self.client.serial.get(join)
+        return self.client.serial_for(obj).get(join)
 
     def is_on(self, entity: Entity) -> bool | None:
         if entity.feedback is None:

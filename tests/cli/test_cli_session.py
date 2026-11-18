@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import yaml
 from cipcore.joinmap import parse
@@ -37,6 +39,25 @@ async def test_listen_records_joins_and_writes_a_valid_draft(processor, tmp_path
     assert {e.analog for e in jm.entities if e.analog} == {11}
     assert processor.presses == []
     assert "high: d121" in capsys.readouterr().out
+
+
+async def test_listen_reports_list_joins_apart_and_drafts_them(processor, tmp_path, capsys):
+    processor.digital[None] = {121: 1}
+    processor.serial[11] = "Program text"
+    processor.smart = {None: {3: {121: 0, 2: 1}}}
+    processor.smart_serial = {3: {11: "Item one"}}
+    draft, dump = tmp_path / "draft.yaml", tmp_path / "joins.json"
+    args = args_for(processor, "--draft", str(draft), "--json", str(dump))
+    assert await session._listen(args) == 0
+    jm = parse(yaml.safe_load(draft.read_text()))
+    listed = {(e.type, e.join or e.serial, e.smart_object) for e in jm.entities}
+    assert {("binary_sensor", 121, None), ("sensor", 11, None)} <= listed
+    assert {("binary_sensor", 121, 3), ("binary_sensor", 2, 3), ("sensor", 11, 3)} <= listed
+    assert "Untested on real hardware" in draft.read_text()
+    snap = json.loads(dump.read_text())
+    assert snap["smart_objects"]["3"]["serial"] == {"11": "Item one"}
+    assert snap["subsystems"]["(none)"]["digital"] == {"121": 1}
+    assert "SmartObject 3: 2 digital and analog, 1 serial" in capsys.readouterr().out
 
 
 async def test_listen_on_an_undefined_ipid_fails_before_registering_for_real(processor):
@@ -80,9 +101,20 @@ async def test_label_appends_an_entry_that_validates(tmp_path, monkeypatch):
     target = tmp_path / "labels.yaml"
     target.write_text("version: 1\nentities:\n")
     monkeypatch.setattr("builtins.input", lambda prompt: "Porch Light")
-    await session._label(target, [("digital", 121, 1), ("digital", 122, 1), ("analog", 3, 9)])
+    await session._label(
+        target, [("digital", 121, 1, 0), ("digital", 122, 1, 0), ("analog", 3, 9, 0)]
+    )
     jm = parse(yaml.safe_load(target.read_text()))
     assert [(e.name, e.join) for e in jm.entities] == [("Porch Light", 121)]
+
+
+async def test_label_names_the_smart_object_of_a_list_join(tmp_path, monkeypatch):
+    target = tmp_path / "labels.yaml"
+    target.write_text("version: 1\nentities:\n")
+    monkeypatch.setattr("builtins.input", lambda prompt: "Source 2 selected")
+    await session._label(target, [("digital", 12, 1, 3)])
+    jm = parse(yaml.safe_load(target.read_text()))
+    assert [(e.join, e.smart_object) for e in jm.entities] == [(12, 3)]
 
 
 async def test_listen_over_tls_prints_the_fingerprint(tls_processor, capsys):

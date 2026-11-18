@@ -51,7 +51,7 @@ async def test_ungated_link_registers_and_syncs(processor):
         assert client.digital_for(None) == {121: 1, 126: 0}
         assert client.serial[5] == "Hello"
         assert client.has_state_for(None)
-        assert ("digital", 121, 1, None) in seen
+        assert ("digital", 121, 1, None, 0) in seen
         assert processor.presses == []  # nothing pressed, ever
     finally:
         await client.async_stop()

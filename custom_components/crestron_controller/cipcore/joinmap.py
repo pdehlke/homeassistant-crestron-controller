@@ -76,6 +76,9 @@ class Entity:
     step: float | None = None
     writable: bool = False
     icon: str | None = None
+    # sensor, binary_sensor: read joins inside this SmartObject instead of the
+    # program's own range. See docs/adr/0012-smartobject-joins-are-their-own-namespace.md.
+    smart_object: int | None = None
 
     @property
     def assumed_state(self) -> bool:
@@ -194,6 +197,19 @@ def _join_set(value: Any, where: str) -> frozenset[int]:
     return frozenset(out)
 
 
+def _smart_object(raw: dict[str, Any], where: str) -> int | None:
+    value = raw.get("smart_object")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise JoinMapError(f"{where}: smart_object must be a whole number, got {value!r}")
+    # 0 is how the wire would spell the program's own joins, so it is refused
+    # rather than read as an object.
+    if not 1 <= value <= 0xFFFFFFFF:
+        raise JoinMapError(f"{where}: smart_object {value} is outside 1-4294967295")
+    return value
+
+
 def _slug(name: str) -> str:
     return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", name.lower())).strip("_")
 
@@ -210,9 +226,9 @@ def _number(raw: dict[str, Any], key: str, where: str) -> float | None:
 _KNOWN_KEYS = {
     LIGHT: {"feedback", "also_reports", "press", "press_join", "on_join", "off_join", "brightness"},
     SWITCH: {"feedback", "also_reports", "press", "press_join", "on_join", "off_join"},
-    BINARY_SENSOR: {"join", "device_class"},
+    BINARY_SENSOR: {"join", "device_class", "smart_object"},
     BUTTON: {"join", "hold_seconds"},
-    SENSOR: {"analog", "serial", "scale", "unit", "device_class"},
+    SENSOR: {"analog", "serial", "scale", "unit", "device_class", "smart_object"},
     NUMBER: {"analog", "scale", "unit", "min", "max", "step", "writable"},
 }
 _COMMON_KEYS = {"type", "id", "name", "subsystem", "icon"}
@@ -227,6 +243,13 @@ def _parse_entity(
     kind = raw.get("type")
     if kind not in ENTITY_TYPES:
         raise JoinMapError(f"{where}: type must be one of {', '.join(ENTITY_TYPES)}")
+    if "smart_object" in raw and kind not in (SENSOR, BINARY_SENSOR):
+        # Writing into a SmartObject has never been seen to work, so nothing
+        # that can write may name one. See issue #4.
+        raise JoinMapError(
+            f"{where}: smart_object is read-only for now; only a sensor or binary_sensor "
+            "can read a SmartObject"
+        )
     unknown = set(raw) - _COMMON_KEYS - _KNOWN_KEYS[kind]
     if unknown:
         raise JoinMapError(f"{where}: unknown key(s) for a {kind}: {', '.join(sorted(unknown))}")
@@ -254,6 +277,7 @@ def _parse_entity(
         "name": name.strip(),
         "subsystem": subsystem,
         "icon": raw.get("icon"),
+        "smart_object": _smart_object(raw, where),
     }
 
     if kind in (LIGHT, SWITCH):

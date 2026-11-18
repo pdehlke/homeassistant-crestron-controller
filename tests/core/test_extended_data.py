@@ -100,10 +100,10 @@ async def test_extended_digitals_and_analogs_are_not_published_as_serials():
     await cip._handle(*frames(EXTENDED_ANALOG))
     await cip._handle(*frames(EXTENDED_SERIAL))
     assert seen == [
-        ("digital", 24, 1, None),
-        ("digital", 25, 0, None),
-        ("analog", 11, 0x1234, None),
-        ("serial", 3, "Now playing 12", None),
+        ("digital", 24, 1, None, 0),
+        ("digital", 25, 0, None, 0),
+        ("analog", 11, 0x1234, None, 0),
+        ("serial", 3, "Now playing 12", None, 0),
     ]
     assert cip.serial == {3: "Now playing 12"}
 
@@ -113,9 +113,9 @@ async def test_every_record_in_a_frame_is_applied():
     await cip._handle(*frames(DATA_TWO_RECORDS))
     await cip._handle(*frames(EXTENDED_TWO_RECORDS))
     assert seen == [
-        ("digital", 24, 1, None),
-        ("analog", 11, 0x1234, None),
-        ("serial", 3, "Hi", None),
+        ("digital", 24, 1, None, 0),
+        ("analog", 11, 0x1234, None, 0),
+        ("serial", 3, "Hi", None, 0),
     ]
 
 
@@ -125,22 +125,18 @@ async def test_repeat_digital_and_the_other_serial_records_decode_inside_data():
     await cip._handle(p.TYPE_DATA, bytes.fromhex("00 00 03 27 17 00"))
     await cip._handle(p.TYPE_DATA, bytes.fromhex("00 00 06 2a 00 04 00 4f 6e"))
     await cip._handle(p.TYPE_DATA, bytes.fromhex("00 00 07 34 00 05 03 4f 66 66"))
-    assert seen == [("digital", 24, 1, None), ("serial", 5, "On", None), ("serial", 6, "Off", None)]
-
-
-async def test_smart_object_records_are_skipped():
-    cip, seen = client()
-    # built: SmartObject 1 holding digital join 1 high, from rellis's nesting layout.
-    await cip._handle(p.TYPE_DATA, bytes.fromhex("00 00 09 38 00 00 00 01 03 00 00 00"))
-    assert seen == []
-    assert cip.digital_for(None) == {}
+    assert seen == [
+        ("digital", 24, 1, None, 0),
+        ("serial", 5, "On", None, 0),
+        ("serial", 6, "Off", None, 0),
+    ]
 
 
 async def test_digitals_in_extended_data_during_an_entry_are_collected_not_published():
     cip, seen = client()
     cip._collecting, cip._collecting_for = {}, "lights"
     await cip._handle(*frames(EXTENDED_TWO_RECORDS))
-    assert cip._collecting == {24: 1}
+    assert cip._collecting == {(0, 24): 1}
     assert [s for s in seen if s[0] == "digital"] == []
     assert cip.digital_for(None) == {}
 
@@ -239,4 +235,4 @@ async def test_utf16_serials_are_published_decoded_from_any_serial_record_type()
     await cip._handle(p.TYPE_EXTENDED_DATA, bytes([0, 0, 0, len(record)]) + record)
     record = bytes([p.DATA_SERIAL]) + serial_body(4, 0x04, data)
     await cip._handle(p.TYPE_DATA, bytes([0, 0, len(record)]) + record)
-    assert seen == [("serial", 3, text, None), ("serial", 4, text, None)]
+    assert seen == [("serial", 3, text, None, 0), ("serial", 4, text, None, 0)]

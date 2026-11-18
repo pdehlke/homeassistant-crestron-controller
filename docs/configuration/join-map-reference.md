@@ -168,6 +168,7 @@ A read-only digital join.
 | --- | --- | --- | --- |
 | `join` | join, required | none | The digital join to read. |
 | `device_class` | a Home Assistant binary sensor device class, such as `door` or `garage_door` | none | How Home Assistant presents it. Must be a class Home Assistant knows, or the entity fails to load. |
+| `smart_object` | whole number, 1 or more | none | Read `join` inside this list instead of the program's own joins. Not tested on real hardware; see [reading lists](./reading-lists.md). |
 
 ### button
 
@@ -191,6 +192,7 @@ A read-only analog or serial join. Exactly one of `analog` or `serial`.
 | `scale` | `raw` or `percent` | `raw` | Analog only. `percent` shows the value as a percentage of 65535, to one decimal place. Not allowed with `serial`. |
 | `unit` | text | `%` when `scale: percent`, otherwise none | The unit of measurement. |
 | `device_class` | a Home Assistant sensor device class | none | Must be a class Home Assistant knows. |
+| `smart_object` | whole number, 1 or more | none | Read `analog` or `serial` inside this list instead of the program's own joins. Not tested on real hardware; see [reading lists](./reading-lists.md). |
 
 Serial sensors are available whenever the link is connected and synced, whatever subsystem they
 name. On the system this was developed on, label serials arrived once per session rather than once
@@ -317,6 +319,8 @@ name. Cross-entity errors start with the entity's id.
 | `...: min must be a number, got ...` (and `max`, `step`) | Use plain numbers. |
 | `...: need 0 <= min < max <= 100` (or `65535`) | Fix the range. |
 | `...: <key> must be a whole number, got ...` / `... is outside 1-32768` | A join key holds something that is not a valid join number. |
+| `...: smart_object is read-only for now; only a sensor or binary_sensor can read a SmartObject` | Lists can be read but not written. Remove `smart_object` from the light, switch, button or number. |
+| `...: smart_object must be a whole number, got ...` / `smart_object ... is outside 1-4294967295` | Use the list's number as `crestron-controller listen` prints it, without quotes. |
 
 ### Across entities
 

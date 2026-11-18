@@ -48,7 +48,9 @@ class CrestronControllerEntity(Entity):
         def _changed() -> None:
             self.async_write_ha_state()
 
-        self.async_on_remove(self._hub.subscribe(self._item.reads(), _changed))
+        self.async_on_remove(
+            self._hub.subscribe(self._item.reads(), _changed, self._item.smart_object or 0)
+        )
 
     @property
     def available(self) -> bool:
@@ -59,6 +61,8 @@ class CrestronControllerEntity(Entity):
         attrs: dict[str, object] = {"joins_read": [f"{k}:{j}" for k, j in self._item.reads()]}
         if self._item.subsystem is not None:
             attrs["subsystem"] = self._item.subsystem
+        if self._item.smart_object is not None:
+            attrs["smart_object"] = self._item.smart_object
         return attrs
 
     async def _run(self, coro) -> None:

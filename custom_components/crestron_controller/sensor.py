@@ -37,9 +37,10 @@ class JoinValueSensor(CrestronControllerEntity, SensorEntity):
     @property
     def native_value(self) -> float | int | str | None:
         item = self._item
+        obj = item.smart_object or 0
         if item.serial is not None:
-            return self._hub.serial(item.serial)
-        raw = self._hub.analog(item.subsystem, item.analog)
+            return self._hub.serial(item.serial, obj)
+        raw = self._hub.analog(item.subsystem, item.analog, obj)
         if raw is None:
             return None
         if item.scale == SCALE_PERCENT:

@@ -77,6 +77,16 @@ joins that arrived after the entry press.
 - **Serial** joins are text the program sends to panels: button labels, room names, status lines.
   They are not grouped by subsystem.
 
+If any list on a panel sent something, a line per list follows the serial count:
+
+```text
+SmartObject 3: 12 digital and analog, 8 serial (untested on real hardware)
+```
+
+Lists ([SmartObjects](../concepts/glossary.md#smartobject)) number their joins separately, so these
+are not counted in the lines above. Reading them has not been tested on a real processor; see
+[reading lists](../configuration/reading-lists.md).
+
 ## On a program that is not gated
 
 On a program with no gated subsystems, the registration dump carries everything the slot can see.
@@ -164,6 +174,15 @@ gone quiet.
 
 Digital values are 1 (high) or 0 (low). Join numbers start at 1, as everywhere in this project.
 
+When a list sent anything, a `smart_objects` key holds each list's joins under its number, laid out
+the same way:
+
+```json
+"smart_objects": {
+  "3": {"subsystems": {"(none)": {"digital": {"1": 1}, "analog": {}}}, "serial": {"11": "Item one"}}
+}
+```
+
 ## The draft join map
 
 `--draft` writes a join map in which every entry is read-only and every name is a placeholder:
@@ -188,6 +207,13 @@ subsystems:
   default: main  # rename to what the button is called on the panel
   entries:
     main: {join: 40, quiet_seconds: 0.42}  # measured once; repeat and keep the largest
+```
+
+List joins come last, after a comment saying they are untested, as entries with `smart_object:`
+([reading lists](../configuration/reading-lists.md)):
+
+```yaml
+  - {type: sensor, name: "List 3 serial 11", serial: 11, smart_object: 3}  # 'Item one'
 ```
 
 The `quiet_seconds` value is the suggestion from this one run's entry dump. Dumps vary from one

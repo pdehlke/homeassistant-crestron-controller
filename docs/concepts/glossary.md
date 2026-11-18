@@ -107,6 +107,19 @@ A number from 0 to 65535, used for levels such as brightness or volume.
 
 Text, used for labels and names the processor fills in on a panel page.
 
+### SmartObject
+
+A list on a touch-panel screen: the music sources you can choose from, the rooms in the house, a
+playlist, a set of saved scenes. Each list is a SmartObject, with a number of its own. The system
+sends a list's contents in a separate format from ordinary buttons and sliders, and numbers the
+list's joins in the list's own range, so a list's text 11 is a different signal from the rest of
+the system's text 11. That is why a join map entry that reads from a list says which list, with
+`smart_object:`.
+
+Crestron Controller can read lists, but has not been tested against a real processor that sends
+them, so nobody has confirmed it works yet. It cannot change anything in a list. If your panels have
+no lists, SmartObjects do not affect you. See [reading lists](../configuration/reading-lists.md).
+
 ### Press
 
 A digital join going high and then low, as a finger on a button does. Crestron Controller holds it

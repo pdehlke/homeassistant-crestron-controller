@@ -13,7 +13,9 @@ client has to get right:
 - CIP over TLS, with a throwaway self-signed certificate like the ones
   processors present;
 - a processor that sends one IP-ID every join as EXTENDED_DATA, as
-  rellis-erigon/Crestron-CIP-HA recorded a DMPS doing. Not observed here.
+  rellis-erigon/Crestron-CIP-HA recorded a DMPS doing. Not observed here;
+- SmartObject joins (lists), laid out as rellis-erigon/Crestron-CIP-HA
+  describes. Not observed here either.
 
 Every write the client sends is recorded so tests can assert exactly what went
 on the wire.
@@ -104,6 +106,12 @@ class FakeProcessor:
     tls_max_version: ssl.TLSVersion | None = None
     # Send digital and analog joins as EXTENDED_DATA instead of DATA.
     extended: bool = False
+    # SmartObject joins: subsystem -> object -> join -> digital value, and
+    # object -> join -> text. Digitals go out with their subsystem's dump.
+    smart: dict[str | None, dict[int, dict[int, int]]] = field(default_factory=dict)
+    smart_serial: dict[int, dict[int, str]] = field(default_factory=dict)
+    # (object, join) pairs left out of a subsystem's entry dump.
+    omit_smart_on_entry: dict[str, set[tuple[int, int]]] = field(default_factory=dict)
 
     presses: list[int] = field(default_factory=list)
     releases: list[int] = field(default_factory=list)
@@ -205,12 +213,37 @@ class FakeProcessor:
         writer.write(p.frame(p.TYPE_EXTENDED_DATA, bytes([0, 0, 0, len(data)]) + data))
         await writer.drain()
 
-    async def _dump(self, writer, subsystem: str | None, omit: set[int] = frozenset()) -> None:
+    async def _send_smart(self, writer, obj: int, inner: bytes) -> None:
+        """One join record (type byte first) wrapped in a SmartObject record."""
+        record = bytes([p.DATA_SMART_OBJECT]) + obj.to_bytes(4, "big")
+        await self._send_record(writer, record + bytes([len(inner)]) + inner)
+
+    async def _send_smart_digital(self, writer, obj: int, join: int, value: int) -> None:
+        n = join - 1
+        inner = bytes([p.DATA_DIGITAL, n & 0xFF, ((n >> 8) & 0x7F) | (0 if value else 0x80)])
+        await self._send_smart(writer, obj, inner)
+
+    async def _send_smart_serial(self, writer, obj: int, join: int, text: str) -> None:
+        n = join - 1
+        inner = bytes([p.DATA_SERIAL, n >> 8, n & 0xFF, 0x03]) + text.encode("latin-1")
+        await self._send_smart(writer, obj, inner)
+
+    async def _dump(
+        self,
+        writer,
+        subsystem: str | None,
+        omit: set[int] = frozenset(),
+        omit_smart: set[tuple[int, int]] = frozenset(),
+    ) -> None:
         for join, value in sorted(self.digital.get(subsystem, {}).items()):
             if join not in omit:
                 await self._send_digital(writer, join, value)
         for join, value in sorted(self.analog.get(subsystem, {}).items()):
             await self._send_analog(writer, join, value)
+        for obj, joins in sorted(self.smart.get(subsystem, {}).items()):
+            for join, value in sorted(joins.items()):
+                if (obj, join) not in omit_smart:
+                    await self._send_smart_digital(writer, obj, join, value)
 
     async def _end_of_query(self, writer) -> None:
         writer.write(p.frame(p.TYPE_DATA, bytes([0, 0, 2, p.DATA_UPDATE, p.END_OF_QUERY])))
@@ -222,6 +255,15 @@ class FakeProcessor:
         if subsystem == self._current():
             for writer in list(self._writers):
                 await self._send_digital(writer, join, value)
+
+    async def push_smart_digital(
+        self, subsystem: str | None, obj: int, join: int, value: int
+    ) -> None:
+        """A list item changing on its own, such as a source picked at another panel."""
+        self.smart.setdefault(subsystem, {}).setdefault(obj, {})[join] = value
+        if subsystem == self._current():
+            for writer in list(self._writers):
+                await self._send_smart_digital(writer, obj, join, value)
 
     async def _handle(self, writer, ciptype: int, payload: bytes) -> None:
         if ciptype == p.TYPE_REGISTER:
@@ -245,6 +287,9 @@ class FakeProcessor:
                 await self._dump(writer, self._current())
                 for join, text in sorted(self.serial.items()):
                     await self._send_serial(writer, join, text)
+                for obj, texts in sorted(self.smart_serial.items()):
+                    for join, text in sorted(texts.items()):
+                        await self._send_smart_serial(writer, obj, join, text)
                 await self._end_of_query(writer)
             elif datatype == p.DATA_DIGITAL:
                 for join, value in p.decode_digitals(body):
@@ -264,7 +309,12 @@ class FakeProcessor:
         for name, entry in self.entries.items():
             if join == entry:
                 self.slot_subsystem = name
-                await self._dump(writer, name, self.omit_on_entry.get(name, set()))
+                await self._dump(
+                    writer,
+                    name,
+                    self.omit_on_entry.get(name, set()),
+                    self.omit_smart_on_entry.get(name, set()),
+                )
                 if self.entry_gap:
                     await asyncio.sleep(self.entry_gap)
                 if join in self.courtesy:

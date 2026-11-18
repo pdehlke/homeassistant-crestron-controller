@@ -42,11 +42,30 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry) -> dict
             for name in client.buckets()
         },
         "serial": dict(sorted(client.serial.items())),
+        "smart_objects": {
+            str(obj): {
+                "joins": {
+                    (name or "(no subsystem)"): {
+                        "digital_high": sorted(
+                            j for j, v in client.digital_for(name, obj).items() if v
+                        ),
+                        "digital_low": sorted(
+                            j for j, v in client.digital_for(name, obj).items() if not v
+                        ),
+                        "analog": dict(sorted(client.analog_for(name, obj).items())),
+                    }
+                    for name in client.buckets(obj)
+                },
+                "serial": dict(sorted(client.serial_for(obj).items())),
+            }
+            for obj in client.smart_objects()
+        },
         "entities": [
             {
                 "id": e.id,
                 "type": e.type,
                 "subsystem": e.subsystem,
+                "smart_object": e.smart_object,
                 "reads": e.reads(),
                 "writes": e.writes(),
             }

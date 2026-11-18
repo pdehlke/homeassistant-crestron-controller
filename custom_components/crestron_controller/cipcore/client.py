@@ -42,15 +42,25 @@ from .policy import ANALOG, DIGITAL, LISTEN_ONLY, SERIAL, WritePolicy
 
 _LOGGER = logging.getLogger(__name__)
 
-# Called for every join whose value changed: (kind, join, value, subsystem).
-# `value` is an int for digital and analog joins and a str for serials.
-JoinCallback = Callable[[str, int, int | str, str | None], None]
+# Called for every join whose value changed: (kind, join, value, subsystem,
+# smart object). `value` is an int for digital and analog joins and a str for
+# serials. The smart object is 0 for an ordinary join; a SmartObject's joins
+# are numbered in a range of their own, so its serial 11 is not the program's.
+JoinCallback = Callable[[str, int, int | str, str | None, int], None]
 
 ENTRY_POLL_SECONDS = 0.02
 DISPLACEMENT_WINDOW_SECONDS = 600.0
 
 # Record types laid out as a join, one format byte, then the text.
 _SERIALS = (p.DATA_SERIAL, p.DATA_UNMANGLED_SERIAL, p.DATA_SERIAL_EXTENDED)
+# Record types a SmartObject can carry. Anything else inside one is skipped.
+_OBJECT_JOINS = (
+    p.DATA_DIGITAL,
+    p.DATA_REPEAT_DIGITAL,
+    p.DATA_ANALOG,
+    p.DATA_ANALOG_SHORT,
+    *_SERIALS,
+)
 
 
 @dataclass(frozen=True)
@@ -216,14 +226,17 @@ class CipClient:
         # its joins as off would be confidently wrong.
         self.entered: set[str] = set()
 
-        # Joins bucketed by the subsystem that reported them. The None bucket is
-        # the pre-entry menu on a gated link and everything on an ungated one.
-        self._digital: dict[str | None, dict[int, int]] = {}
-        self._analog: dict[str | None, dict[int, int]] = {}
-        # Serials are not bucketed. On the system this was developed on, the
-        # label serials arrive once per session rather than once per entry, so
-        # bucketing them would lose them at the first subsystem switch.
+        # Joins bucketed by (the subsystem that reported them, smart object).
+        # The None subsystem is the pre-entry menu on a gated link and
+        # everything on an ungated one; smart object 0 is ordinary joins.
+        self._digital: dict[tuple[str | None, int], dict[int, int]] = {}
+        self._analog: dict[tuple[str | None, int], dict[int, int]] = {}
+        # Serials are not bucketed by subsystem. On the system this was
+        # developed on, the label serials arrive once per session rather than
+        # once per entry, so bucketing them would lose them at the first
+        # subsystem switch. SmartObject serials are assumed to behave the same.
         self.serial: dict[int, str] = {}
+        self._object_serial: dict[int, dict[int, str]] = {}
 
         self.connected = False
         self.registered = False
@@ -241,7 +254,8 @@ class CipClient:
         self._last_rx = 0.0
         self._last_data_rx = 0.0
         self._last_bringup = 0.0
-        self._collecting: dict[int, int] | None = None
+        # (smart object, join) -> value, for the digitals of a dump in flight.
+        self._collecting: dict[tuple[int, int], int] | None = None
         self._collecting_for: str | None = None
         self._end_of_query = asyncio.Event()
         self._write_lock = asyncio.Lock()
@@ -254,15 +268,24 @@ class CipClient:
 
     # ---- state -------------------------------------------------------------
 
-    def digital_for(self, subsystem: str | None) -> dict[int, int]:
-        return self._digital.setdefault(subsystem, {})
+    def digital_for(self, subsystem: str | None, obj: int = 0) -> dict[int, int]:
+        return self._digital.setdefault((subsystem, obj), {})
 
-    def analog_for(self, subsystem: str | None) -> dict[int, int]:
-        return self._analog.setdefault(subsystem, {})
+    def analog_for(self, subsystem: str | None, obj: int = 0) -> dict[int, int]:
+        return self._analog.setdefault((subsystem, obj), {})
 
-    def buckets(self) -> list[str | None]:
-        """Every subsystem that has reported joins, None first."""
-        return sorted({*self._digital, *self._analog}, key=lambda s: "" if s is None else s)
+    def serial_for(self, obj: int = 0) -> dict[int, str]:
+        return self.serial if obj == 0 else self._object_serial.setdefault(obj, {})
+
+    def buckets(self, obj: int = 0) -> list[str | None]:
+        """Every subsystem that has reported joins for this smart object, None first."""
+        found = {sub for sub, o in (*self._digital, *self._analog) if o == obj}
+        return sorted(found, key=lambda s: "" if s is None else s)
+
+    def smart_objects(self) -> list[int]:
+        """Every SmartObject that has reported a join, in order."""
+        found = {o for _, o in (*self._digital, *self._analog)} | set(self._object_serial)
+        return sorted(found - {0})
 
     def has_state_for(self, subsystem: str | None) -> bool:
         """Whether joins read from this subsystem mean anything yet."""
@@ -644,15 +667,23 @@ class CipClient:
         another subsystem can read stale until a later frame corrects it; a stale
         reading is better than a wrong one.
         """
-        previous = self.digital_for(subsystem)
-        changed = [(j, v) for j, v in collected.items() if previous.get(j) != v]
-        previous.update(collected)
-        for join, value in changed:
-            self._emit(DIGITAL, join, value, subsystem)
+        changed = [
+            (obj, join, value)
+            for (obj, join), value in collected.items()
+            if self.digital_for(subsystem, obj).get(join) != value
+        ]
+        # Every bucket is updated before anything is told, so a listener reading
+        # a neighbouring join mid-merge never sees half a dump.
+        for (obj, join), value in collected.items():
+            self.digital_for(subsystem, obj)[join] = value
+        for obj, join, value in changed:
+            self._emit(DIGITAL, join, value, subsystem, obj)
 
-    def _emit(self, kind: str, join: int, value: int | str, subsystem: str | None) -> None:
+    def _emit(
+        self, kind: str, join: int, value: int | str, subsystem: str | None, obj: int = 0
+    ) -> None:
         if self._on_join:
-            self._on_join(kind, join, value, subsystem)
+            self._on_join(kind, join, value, subsystem, obj)
 
     # ---- protocol ----------------------------------------------------------
 
@@ -698,41 +729,50 @@ class CipClient:
             for datatype, body in records:
                 await self._handle_record(datatype, body)
 
-    def _set_serial(self, join: int, text: str) -> None:
-        if self.serial.get(join) != text:
-            self.serial[join] = text
-            self._emit(SERIAL, join, text, None)
+    def _set_serial(self, join: int, text: str, obj: int = 0) -> None:
+        bucket = self.serial_for(obj)
+        if bucket.get(join) != text:
+            bucket[join] = text
+            self._emit(SERIAL, join, text, None, obj)
 
-    def _set_analog(self, join: int, value: int) -> None:
+    def _set_analog(self, join: int, value: int, obj: int = 0) -> None:
         subsystem = self._incoming
-        bucket = self.analog_for(subsystem)
+        bucket = self.analog_for(subsystem, obj)
         if bucket.get(join) != value:
             bucket[join] = value
-            self._emit(ANALOG, join, value, subsystem)
+            self._emit(ANALOG, join, value, subsystem, obj)
 
-    async def _handle_record(self, datatype: int, body: bytes) -> None:
+    async def _handle_record(self, datatype: int, body: bytes, obj: int = 0) -> None:
         # Records are handled alike whichever packet type carried them: some
-        # processors send one IP-ID everything as EXTENDED_DATA.
+        # processors send one IP-ID everything as EXTENDED_DATA. SmartObject
+        # joins come back through here with their object, so they take exactly
+        # the same collect-and-merge path as ordinary ones.
+        if obj and datatype not in _OBJECT_JOINS:
+            _LOGGER.debug(
+                "%s: skipping record type 0x%02x inside SmartObject %d", self.name, datatype, obj
+            )
+            return
         if datatype in (p.DATA_DIGITAL, p.DATA_REPEAT_DIGITAL):
             pairs = p.decode_digitals(body)
             if self._collecting is not None:
                 # An entry or re-poll is in flight. Collect rather than publish:
                 # the diff happens once the dump is complete.
-                self._collecting.update(pairs)
+                self._collecting.update(((obj, join), value) for join, value in pairs)
                 return
             subsystem = self.current_subsystem
-            bucket = self.digital_for(subsystem)
+            bucket = self.digital_for(subsystem, obj)
             for join, value in pairs:
                 if bucket.get(join) != value:
                     bucket[join] = value
-                    self._emit(DIGITAL, join, value, subsystem)
+                    self._emit(DIGITAL, join, value, subsystem, obj)
         elif datatype == p.DATA_ANALOG:
             for join, value in p.decode_analogs(body):
-                self._set_analog(join, value)
+                self._set_analog(join, value, obj)
         elif datatype == p.DATA_ANALOG_SHORT and len(body) >= 3:
-            self._set_analog(body[0] + 1, (body[1] << 8) | body[2])
+            self._set_analog(body[0] + 1, (body[1] << 8) | body[2], obj)
         elif datatype in _SERIALS and len(body) >= 3:
-            self._set_serial(*p.decode_serial(body))
+            join, text = p.decode_serial(body)
+            self._set_serial(join, text, obj)
         elif datatype == p.DATA_SERIAL_INDEXED:
             text = body.decode("latin-1")
             head = text.split(",", 1)[0].lstrip("#")
@@ -743,10 +783,13 @@ class CipClient:
             self._end_of_query.set()
             self._start_bring_up()
         elif datatype in (p.DATA_SMART_OBJECT, p.DATA_SMART_OBJECT_EXTENDED):
-            # A SmartObject's joins are a namespace of their own, which join
-            # maps cannot express yet. Decoding them as ordinary joins would
-            # publish them on the wrong entities.
-            _LOGGER.debug("%s: skipping SmartObject record %s", self.name, body.hex(" "))
+            for inner, kind, record in p.smart_object_records(body):
+                if inner == 0:
+                    # Object 0 would land in the program's own join range,
+                    # which is exactly the mix-up the object number prevents.
+                    _LOGGER.debug("%s: skipping SmartObject 0 record %s", self.name, body.hex(" "))
+                    continue
+                await self._handle_record(kind, record, inner)
 
     # ---- writing -----------------------------------------------------------
 

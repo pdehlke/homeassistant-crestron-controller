@@ -27,7 +27,9 @@ class JoinSensor(CrestronControllerEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        value = self._hub.digital(self._item.subsystem, self._item.join)
+        value = self._hub.digital(
+            self._item.subsystem, self._item.join, self._item.smart_object or 0
+        )
         return None if value is None else bool(value)
 
 
