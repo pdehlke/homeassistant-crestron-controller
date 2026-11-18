@@ -130,3 +130,14 @@ async def test_plain_tls_against_an_old_processor_suggests_legacy(old_tls_proces
     )
     assert await session._listen(args) == 2
     assert "--legacy-tls" in capsys.readouterr().err
+
+
+def test_the_entry_timer_counts_digitals_in_either_data_packet_type():
+    timer = session._EntryTimer()
+    press = bytes.fromhex("00 00 03 00 27 00")
+    timer("tx", 0x05, press)
+    timer("rx", 0x05, bytes.fromhex("00 00 03 00 2c 01"))
+    # An EXTENDED_DATA frame whose second record is digital.
+    timer("rx", 0x12, bytes.fromhex("00 00 00 05 14 00 0a 12 34 00 03 00 2d 01"))
+    timer("rx", 0x12, bytes.fromhex("00 00 00 06 34 00 02 03 48 69"))  # a serial, not counted
+    assert len(timer.stamps) == 2

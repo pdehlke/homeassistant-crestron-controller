@@ -38,6 +38,11 @@ the MIT licence, without warranty of any kind; see `LICENSE`.
   serial write encodings here still come from it. This project's code is a separate
   re-implementation, checked against real processors; see
   [cip-wire-format.md](../protocol/cip-wire-format.md) and `THIRD_PARTY_NOTICES.md`.
+- **Crestron-CIP-HA, by rellis-erigon.**
+  [rellis-erigon/Crestron-CIP-HA](https://github.com/rellis-erigon/Crestron-CIP-HA), MIT licensed.
+  Its notes on EXTENDED_DATA frames, and on frames that hold several join records, are where this
+  project's handling of both comes from. That part has not been checked against a real processor
+  here; see [cip-wire-format.md](../protocol/cip-wire-format.md) and `THIRD_PARTY_NOTICES.md`.
 - **CresnetMon, by DosMan.** DosMan wrote CresnetMon, a Windows Forms monitor for the Cresnet
   RS-485 bus, and published it on CodePlex in April 2015 under the Microsoft Public License
   (Ms-PL). Stephen Genusa later mirrored it to GitHub as

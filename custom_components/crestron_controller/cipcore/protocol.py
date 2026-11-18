@@ -13,6 +13,10 @@ processors. Which parts were checked live and which were not is recorded in
 docs/protocol/cip-wire-format.md; the short version is that registration,
 heartbeat, the update request and every digital encoding were observed on real
 hardware, and the analog and serial *writes* were not.
+
+The record walk in iter_records() follows rellis-erigon/Crestron-CIP-HA (MIT,
+see THIRD_PARTY_NOTICES.md). Joins of every type arriving in EXTENDED_DATA
+frames come from that project's notes and have not been observed here.
 """
 
 from __future__ import annotations
@@ -29,15 +33,21 @@ TYPE_DATA = 0x05
 TYPE_HEARTBEAT = 0x0D
 TYPE_HEARTBEAT_REPLY = 0x0E
 TYPE_REGISTER_REQUEST = 0x0F
-TYPE_SERIAL = 0x12
+# The same join records as TYPE_DATA behind a longer header. Not serial-only.
+TYPE_EXTENDED_DATA = 0x12
 
-# Data types, as the fourth payload byte of a type 0x05 frame.
+# Record types, the byte after each record's length. iter_records() finds them.
 DATA_DIGITAL = 0x00
 DATA_ANALOG_SHORT = 0x01
 DATA_SERIAL_INDEXED = 0x02
 DATA_UPDATE = 0x03
 DATA_ANALOG = 0x14
 DATA_SERIAL = 0x15
+DATA_REPEAT_DIGITAL = 0x27
+DATA_UNMANGLED_SERIAL = 0x2A
+DATA_SERIAL_EXTENDED = 0x34
+DATA_SMART_OBJECT = 0x38
+DATA_SMART_OBJECT_EXTENDED = 0x39
 
 END_OF_QUERY = 0x1C
 
@@ -118,8 +128,36 @@ def serial_packet(join: int, text: str) -> bytes:
     """Encode a serial join write. Same provenance and caveat as analog_packet."""
     n = _check_join(join)
     data = text.encode("latin-1")
-    body = bytes([0x34, (n >> 8) & 0xFF, n & 0xFF, 0x03]) + data
-    return frame(TYPE_SERIAL, bytes([0x00, 0x00, 0x00, len(body)]) + body)
+    body = bytes([DATA_SERIAL_EXTENDED, (n >> 8) & 0xFF, n & 0xFF, 0x03]) + data
+    return frame(TYPE_EXTENDED_DATA, bytes([0x00, 0x00, 0x00, len(body)]) + body)
+
+
+def iter_records(ciptype: int, payload: bytes) -> list[tuple[int, bytes]]:
+    """Cut a DATA or EXTENDED_DATA payload into (record type, record bytes) pairs.
+
+    A DATA payload is one zero byte then records; EXTENDED_DATA has two zero
+    bytes. Each record is a 16-bit length, counting the type byte, then the type
+    and its bytes, and one frame can hold several records back to back.
+
+    A payload whose lengths do not account for every byte is read the way this
+    client read every frame before records were walked: one record, its type at
+    the header's end and its bytes running to the end of the frame. Frames that
+    decoded before still decode the same.
+    """
+    start = 2 if ciptype == TYPE_EXTENDED_DATA else 1
+    records: list[tuple[int, bytes]] = []
+    i = start
+    while i + 3 <= len(payload):
+        length = (payload[i] << 8) | payload[i + 1]
+        if length < 1 or i + 2 + length > len(payload):
+            break
+        records.append((payload[i + 2], payload[i + 3 : i + 2 + length]))
+        i += 2 + length
+    if records and i == len(payload):
+        return records
+    if len(payload) > start + 2:
+        return [(payload[start + 2], payload[start + 3 :])]
+    return []
 
 
 def decode_digitals(body: bytes) -> list[tuple[int, int]]:
@@ -133,6 +171,21 @@ def decode_digitals(body: bytes) -> list[tuple[int, int]]:
         join = (((body[i + 1] & 0x7F) << 8) | body[i]) + 1
         out.append((join, ((body[i + 1] & 0x80) >> 7) ^ 1))
     return out
+
+
+def decode_serial(body: bytes) -> tuple[int, str]:
+    """Decode a serial record body (types 15, 2A and 34) into (join, text).
+
+    The body is the 0-based join big-endian, a format byte, then the text. Bit
+    0x04 of the format byte marks UTF-16 big-endian text, two bytes per
+    character, which is how text outside Latin-1 travels. That meaning comes
+    from rellis-erigon/Crestron-CIP-HA and has not been observed here. Without
+    the bit the text is Latin-1, one byte per character.
+    """
+    join = ((body[0] << 8) | body[1]) + 1
+    if body[2] & 0x04:
+        return join, body[3:].decode("utf-16-be", "replace")
+    return join, body[3:].decode("latin-1")
 
 
 def decode_analogs(body: bytes) -> list[tuple[int, int]]:

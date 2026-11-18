@@ -28,7 +28,9 @@ password, packet types `0B` and `0C`) is not supported; see
 Everything in this table is implemented. The right-hand column says how much trust it deserves.
 "Observed" means seen working against a real processor on the system this was developed on, with
 the exact bytes recorded in tests. "From klenae" means taken from klenae/python-cipclient and not
-yet seen accepted by a processor in this project.
+yet seen accepted by a processor in this project. "From rellis" means taken from
+[rellis-erigon/Crestron-CIP-HA](https://github.com/rellis-erigon/Crestron-CIP-HA) (MIT) and not
+seen on a processor in this project.
 
 | Message | Direction | Status |
 | --- | --- | --- |
@@ -44,6 +46,9 @@ yet seen accepted by a processor in this project.
 | Analog and serial feedback | processor to client | Observed. Which of the variants below carried it was not recorded variant by variant; the decoder accepts all of them. |
 | Analog join write | client to processor | From klenae. Never seen accepted (see below). |
 | Serial join write | client to processor | From klenae. Never seen accepted. |
+| Digital and analog joins in EXTENDED_DATA (type `12`) | processor to client | From rellis. Not observed: the development system's processors have only been seen to send serials this way. |
+| Several join records in one data frame | processor to client | From rellis. Not observed. |
+| Record types `27`, `2A` and `34` inside type `05` | processor to client | From rellis. Not observed. |
 
 The analog write caveat in full: the system this was developed on had no program logic that
 accepts an analog value from a panel. Its only two analog joins were feedback-only, and two writes
@@ -72,7 +77,7 @@ the front of a buffer and keeps the remainder for the next read.
 | `0D` | Heartbeat |
 | `0E` | Heartbeat reply |
 | `0F` | Register request: the processor asks the client to register |
-| `12` | Serial join data in its own frame type |
+| `12` | Extended data: the same join records as `05`, behind a longer header |
 
 ## Registering
 
@@ -100,15 +105,31 @@ flow uses it to check an address and IP-ID before saving.
 Registration through the end of the dump took about 1.1 seconds on the system this was developed
 on, with roughly 150 frames arriving in under a second.
 
-## Data frames (type 05)
+## Data frames (types 05 and 12)
 
-The payload of a type `05` frame is:
+Joins travel in records. Each record is a 16-bit length, big-endian, that counts the type byte and
+everything after it, then the record type, then the record's bytes:
 
 ```text
-00 00 <count> <datatype> <body ...>
+<length hi> <length lo> <datatype> <body ...>
 ```
 
-`<count>` is the number of bytes from `<datatype>` to the end. The data types:
+A type `05` (DATA) payload is one `00` byte followed by records. A type `12` (EXTENDED_DATA)
+payload is two `00` bytes followed by records. Every frame this project has recorded held a single
+record, so in practice a type `05` payload reads as `00 00 <count> <datatype> <body>`.
+
+According to rellis-erigon/Crestron-CIP-HA, which recorded it on a live DMPS, the two packet types
+carry the same records, a frame can hold several records back to back, and a processor can send
+one IP-ID all of its joins as EXTENDED_DATA while sending another IP-ID plain DATA. The client
+therefore handles both packet types alike and walks every record in a frame (`iter_records()` in
+`protocol.py`). None of that has been observed by this project; until this was added, the client
+read every type `12` frame as a serial.
+
+If the record lengths in a frame do not account for every byte, the client falls back to reading
+the frame as one record running to the end of the frame, which is how it read every frame before.
+A frame that decoded before still decodes the same way.
+
+The record types:
 
 | Datatype | Meaning |
 | --- | --- |
@@ -118,6 +139,15 @@ The payload of a type `05` frame is:
 | `03` | Update request and end-of-query |
 | `14` | Analog joins |
 | `15` | Serial join |
+| `27` | Digital joins, repeated. Decoded like `00`. From rellis. |
+| `2A` | Serial join, unmangled. Decoded like `15`. From rellis. |
+| `34` | Serial join, extended. Decoded like `15`. Our own serial writes use it. |
+| `38`, `39` | SmartObject joins. Skipped, with a debug log entry; see below. |
+
+SmartObject records hold joins that belong to one object on a panel page, such as a list, and are
+numbered in that object's own range: a list's serial 11 is a different signal from the program's
+serial 11. Join maps have no way to name them yet, so the client skips them rather than publishing
+them on the wrong entities.
 
 ### Digital joins (datatype 00)
 
@@ -143,7 +173,9 @@ against packed five into a single frame; reading only the first pair loses the r
 Datatype `14`: four bytes per join, the 0-based join big-endian then the value big-endian (0 to
 65535). Several joins can follow one another.
 
-Datatype `01`: one byte of 0-based join, then two bytes of value.
+Datatype `01`: one byte of 0-based join, then two bytes of value. rellis-erigon/Crestron-CIP-HA
+decodes `01` as four bytes per join, like `14`. Neither layout has been confirmed by this project,
+and the client keeps the short form it has always used.
 
 An analog write, from klenae, is datatype `14` with one join:
 
@@ -151,14 +183,22 @@ An analog write, from klenae, is datatype `14` with one join:
 05 00 08 00 00 05 14 <join hi> <join lo> <value hi> <value lo>
 ```
 
-### Serial joins (datatypes 15 and 02, and type 12)
+### Serial joins (datatypes 15, 2A, 34 and 02)
 
-Datatype `15`: the 0-based join big-endian, one further byte, then the text (decoded as Latin-1).
+Datatypes `15`, `2A` and `34`: the 0-based join big-endian, one format byte, then the text
+(`decode_serial()` in `protocol.py`).
+
+When bit `04` of the format byte is set, the text is UTF-16, big-endian, two bytes per character.
+That is how text outside Latin-1 travels: accented and non-Latin scripts, such as a room name in
+Greek or a track title in Japanese. Otherwise the text is Latin-1, one byte per character. A UTF-16
+string with an odd byte count decodes with a replacement character at the end instead of failing.
+The meaning of the bit comes from rellis-erigon/Crestron-CIP-HA. This project has not recorded the
+format byte a real processor sends, so whether processors set it as described is unverified. The
+format byte `03` that this client's own serial writes send leaves bit `04` clear.
 
 Datatype `02`: text of the form `#N,...`; the number before the comma is taken as the join.
 
-Type `12` frames carry serial data in their own frame type. The client reads the 0-based join from
-payload bytes 5 and 6 and the text from byte 8 on. A serial write, from klenae, is:
+A serial write, from klenae, is an EXTENDED_DATA frame holding one `34` record:
 
 ```text
 12 <len hi> <len lo> 00 00 00 <count> 34 <join hi> <join lo> 03 <text ...>

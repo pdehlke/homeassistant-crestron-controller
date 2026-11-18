@@ -49,6 +49,9 @@ JoinCallback = Callable[[str, int, int | str, str | None], None]
 ENTRY_POLL_SECONDS = 0.02
 DISPLACEMENT_WINDOW_SECONDS = 600.0
 
+# Record types laid out as a join, one format byte, then the text.
+_SERIALS = (p.DATA_SERIAL, p.DATA_UNMANGLED_SERIAL, p.DATA_SERIAL_EXTENDED)
+
 
 @dataclass(frozen=True)
 class Subsystem:
@@ -684,11 +687,16 @@ class CipClient:
         elif ciptype == p.TYPE_DISCONNECT:
             self._displacements.append(time.monotonic())
             raise self._fail(ERROR_DISPLACED, "processor ended the session")
-        elif ciptype == p.TYPE_DATA and len(payload) >= 4:
-            await self._handle_data(payload)
-        elif ciptype == p.TYPE_SERIAL and len(payload) >= 8:
-            join = ((payload[5] << 8) | payload[6]) + 1
-            self._set_serial(join, payload[8:].decode("latin-1"))
+        elif ciptype in (p.TYPE_DATA, p.TYPE_EXTENDED_DATA):
+            records = p.iter_records(ciptype, payload)
+            if records:
+                # Tracked separately from _last_rx, which a heartbeat reply also
+                # moves. An entry dump is detected by quiet, so counting
+                # keepalives as traffic would stretch a window that is under a
+                # second wide.
+                self._last_data_rx = asyncio.get_running_loop().time()
+            for datatype, body in records:
+                await self._handle_record(datatype, body)
 
     def _set_serial(self, join: int, text: str) -> None:
         if self.serial.get(join) != text:
@@ -702,14 +710,10 @@ class CipClient:
             bucket[join] = value
             self._emit(ANALOG, join, value, subsystem)
 
-    async def _handle_data(self, payload: bytes) -> None:
-        datatype = payload[3]
-        body = payload[4:]
-        # Tracked separately from _last_rx, which a heartbeat reply also moves.
-        # An entry dump is detected by quiet, so counting keepalives as traffic
-        # would stretch a window that is under a second wide.
-        self._last_data_rx = asyncio.get_running_loop().time()
-        if datatype == p.DATA_DIGITAL:
+    async def _handle_record(self, datatype: int, body: bytes) -> None:
+        # Records are handled alike whichever packet type carried them: some
+        # processors send one IP-ID everything as EXTENDED_DATA.
+        if datatype in (p.DATA_DIGITAL, p.DATA_REPEAT_DIGITAL):
             pairs = p.decode_digitals(body)
             if self._collecting is not None:
                 # An entry or re-poll is in flight. Collect rather than publish:
@@ -727,8 +731,8 @@ class CipClient:
                 self._set_analog(join, value)
         elif datatype == p.DATA_ANALOG_SHORT and len(body) >= 3:
             self._set_analog(body[0] + 1, (body[1] << 8) | body[2])
-        elif datatype == p.DATA_SERIAL and len(body) >= 3:
-            self._set_serial(((body[0] << 8) | body[1]) + 1, body[3:].decode("latin-1"))
+        elif datatype in _SERIALS and len(body) >= 3:
+            self._set_serial(*p.decode_serial(body))
         elif datatype == p.DATA_SERIAL_INDEXED:
             text = body.decode("latin-1")
             head = text.split(",", 1)[0].lstrip("#")
@@ -738,6 +742,11 @@ class CipClient:
             await self._send(p.HEARTBEAT)
             self._end_of_query.set()
             self._start_bring_up()
+        elif datatype in (p.DATA_SMART_OBJECT, p.DATA_SMART_OBJECT_EXTENDED):
+            # A SmartObject's joins are a namespace of their own, which join
+            # maps cannot express yet. Decoding them as ordinary joins would
+            # publish them on the wrong entities.
+            _LOGGER.debug("%s: skipping SmartObject record %s", self.name, body.hex(" "))
 
     # ---- writing -----------------------------------------------------------
 

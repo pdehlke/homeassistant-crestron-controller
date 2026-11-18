@@ -25,7 +25,14 @@ import yaml
 from cipcore.client import CipClient, Subsystem, Timing, async_probe
 from cipcore.joinmap import JoinMapError, parse
 from cipcore.policy import DIGITAL, LISTEN_ONLY, WritePolicy
-from cipcore.protocol import CIP_PORT, CIP_TLS_PORT, DATA_DIGITAL, TYPE_DATA
+from cipcore.protocol import (
+    CIP_PORT,
+    CIP_TLS_PORT,
+    DATA_DIGITAL,
+    TYPE_DATA,
+    TYPE_EXTENDED_DATA,
+    iter_records,
+)
 
 ENTERED = "entered"
 
@@ -196,7 +203,9 @@ class _EntryTimer:
         self.stamps: list[float] = []
 
     def __call__(self, direction: str, ciptype: int, payload: bytes) -> None:
-        if ciptype != TYPE_DATA or len(payload) <= 3 or payload[3] != DATA_DIGITAL:
+        if ciptype not in (TYPE_DATA, TYPE_EXTENDED_DATA):
+            return
+        if not any(kind == DATA_DIGITAL for kind, _ in iter_records(ciptype, payload)):
             return
         if direction == "tx" and self.pressed_at is None:
             self.pressed_at = time.monotonic()

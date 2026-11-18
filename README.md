@@ -6,8 +6,9 @@ system before Home Assistant is involved. Not affiliated with or endorsed by Cre
 [disclaimer and credits](./docs/about/disclaimer-and-credits.md).
 
 This project began as a fork of DosMan's CresnetMon, the Cresnet bus monitor DosMan published in
-2015, and owes its starting point to that work. It also builds on klenae's python-cipclient. Both
-are credited in full in [disclaimer and credits](./docs/about/disclaimer-and-credits.md).
+2015, and owes its starting point to that work. It also builds on klenae's python-cipclient and on
+rellis-erigon's Crestron-CIP-HA. All three are credited in full in
+[disclaimer and credits](./docs/about/disclaimer-and-credits.md).
 
 This file is a table of contents. New users should start with
 [what you need](./docs/getting-started/what-you-need.md) and read the getting-started section in
@@ -144,7 +145,7 @@ order.
 
 - [Open questions](./docs/project/open-questions.md): what is unknown or deferred, to become issues.
 - [Disclaimer and credits](./docs/about/disclaimer-and-credits.md): trademarks, interoperability,
-  and credit to DosMan's CresnetMon and klenae's python-cipclient.
+  and credit to DosMan's CresnetMon, klenae's python-cipclient and rellis-erigon's Crestron-CIP-HA.
 - [CONTEXT.md](./CONTEXT.md): the project vocabulary, for contributors and coding agents.
 - [CLAUDE.md](./CLAUDE.md) (also `AGENTS.md`): instructions for coding agents working on the code.
 - [Agent docs](./docs/agents/): issue tracker, triage labels and domain-doc conventions.

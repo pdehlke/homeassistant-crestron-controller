@@ -11,7 +11,9 @@ client has to get right:
 - toggle buttons whose feedback flips on the rising edge of a press;
 - a processor that ends the session, and one that never answers a re-poll;
 - CIP over TLS, with a throwaway self-signed certificate like the ones
-  processors present.
+  processors present;
+- a processor that sends one IP-ID every join as EXTENDED_DATA, as
+  rellis-erigon/Crestron-CIP-HA recorded a DMPS doing. Not observed here.
 
 Every write the client sends is recorded so tests can assert exactly what went
 on the wire.
@@ -100,6 +102,8 @@ class FakeProcessor:
     tls: bool = False
     # Serve only this TLS version and older, like a processor too old for 1.2.
     tls_max_version: ssl.TLSVersion | None = None
+    # Send digital and analog joins as EXTENDED_DATA instead of DATA.
+    extended: bool = False
 
     presses: list[int] = field(default_factory=list)
     releases: list[int] = field(default_factory=list)
@@ -178,22 +182,27 @@ class FakeProcessor:
     def _current(self) -> str | None:
         return self.slot_subsystem if self.entries else None
 
+    async def _send_record(self, writer, record: bytes) -> None:
+        if self.extended:
+            writer.write(p.frame(p.TYPE_EXTENDED_DATA, bytes([0, 0, 0, len(record)]) + record))
+        else:
+            writer.write(p.frame(p.TYPE_DATA, bytes([0, 0, len(record)]) + record))
+        await writer.drain()
+
     async def _send_digital(self, writer, join: int, value: int) -> None:
         n = join - 1
         body = bytes([p.DATA_DIGITAL, n & 0xFF, ((n >> 8) & 0x7F) | (0 if value else 0x80)])
-        writer.write(p.frame(p.TYPE_DATA, bytes([0, 0, len(body)]) + body))
-        await writer.drain()
+        await self._send_record(writer, body)
 
     async def _send_analog(self, writer, join: int, value: int) -> None:
         n = join - 1
         body = bytes([p.DATA_ANALOG, n >> 8, n & 0xFF, value >> 8, value & 0xFF])
-        writer.write(p.frame(p.TYPE_DATA, bytes([0, 0, len(body)]) + body))
-        await writer.drain()
+        await self._send_record(writer, body)
 
     async def _send_serial(self, writer, join: int, text: str) -> None:
         n = join - 1
-        data = bytes([0x34, n >> 8, n & 0xFF, 0x03]) + text.encode("latin-1")
-        writer.write(p.frame(p.TYPE_SERIAL, bytes([0, 0, 0, len(data)]) + data))
+        data = bytes([p.DATA_SERIAL_EXTENDED, n >> 8, n & 0xFF, 0x03]) + text.encode("latin-1")
+        writer.write(p.frame(p.TYPE_EXTENDED_DATA, bytes([0, 0, 0, len(data)]) + data))
         await writer.drain()
 
     async def _dump(self, writer, subsystem: str | None, omit: set[int] = frozenset()) -> None:
@@ -247,7 +256,7 @@ class FakeProcessor:
             elif datatype == p.DATA_ANALOG:
                 for join, value in p.decode_analogs(body):
                     self.analog_writes.append((join, value))
-        elif ciptype == p.TYPE_SERIAL:
+        elif ciptype == p.TYPE_EXTENDED_DATA:
             join = ((payload[5] << 8) | payload[6]) + 1
             self.serial_writes.append((join, payload[8:].decode("latin-1")))
 
