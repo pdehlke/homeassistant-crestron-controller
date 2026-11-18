@@ -15,6 +15,7 @@ and its smart object, with object 0 standing for the program's own joins. The cl
 `on_join` callback, the collect-and-merge path for entry dumps, the hub's listeners and the
 diagnostics all carry the object. A join map entity names its object with `smart_object:`, and only
 `sensor` and `binary_sensor` may do so: reading lists is supported, writing to them is not.
+Writing came later, in [ADR 0013](./0013-writing-to-smartobjects.md).
 
 The record layout comes from
 [rellis-erigon/Crestron-CIP-HA](https://github.com/rellis-erigon/Crestron-CIP-HA), which captured

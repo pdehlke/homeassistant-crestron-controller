@@ -205,6 +205,60 @@ async def test_list_entities_read_their_smart_object(hass: HomeAssistant, config
         await hass.config_entries.async_unload(entry.entry_id)
 
 
+SELECT_MAP = (
+    JOIN_MAP
+    + """\
+  - type: select
+    name: Den Source
+    smart_object: 3
+    options:
+      - {name: Radio, press: 1}
+      - {press: 2, name_serial: 22}
+"""
+)
+
+
+async def test_a_select_chooses_from_a_list(hass: HomeAssistant, config_dir, processor):
+    seed(processor)
+    processor.smart = {None: {3: {1: 1, 2: 0}}}
+    processor.smart_serial = {3: {22: "Streaming"}}
+    processor.smart_radio = {3: [1, 2]}
+    entry = add_entry(hass, config_dir, processor, join_map=SELECT_MAP)
+    await setup(hass, entry)
+    try:
+        state = hass.states.get("select.house_den_source")
+        assert state.attributes["options"] == ["Radio", "Streaming"]
+        assert state.state == "Radio"
+        await hass.services.async_call(
+            "select",
+            "select_option",
+            {"entity_id": "select.house_den_source", "option": "Streaming"},
+            blocking=True,
+        )
+        assert processor.smart_presses == [(3, 2)]
+        await wait_for(lambda: hass.states.get("select.house_den_source").state == "Streaming")
+    finally:
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_a_listen_only_select_refuses(hass: HomeAssistant, config_dir, processor):
+    seed(processor)
+    processor.smart = {None: {3: {1: 1}}}
+    entry = add_entry(hass, config_dir, processor, writes=False, join_map=SELECT_MAP)
+    await setup(hass, entry)
+    try:
+        with pytest.raises(HomeAssistantError, match="listen-only"):
+            await hass.services.async_call(
+                "select",
+                "select_option",
+                {"entity_id": "select.house_den_source", "option": "Option 2"},
+                blocking=True,
+            )
+        assert processor.smart_presses == []
+    finally:
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
 async def test_config_flow_creates_entry_and_starter_map(hass, config_dir, processor):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}

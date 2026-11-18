@@ -112,8 +112,13 @@ class FakeProcessor:
     smart_serial: dict[int, dict[int, str]] = field(default_factory=dict)
     # (object, join) pairs left out of a subsystem's entry dump.
     omit_smart_on_entry: dict[str, set[tuple[int, int]]] = field(default_factory=dict)
+    # object -> item joins that behave as a list: pressing one makes it high
+    # and the rest low, in the slot's current subsystem.
+    smart_radio: dict[int, list[int]] = field(default_factory=dict)
 
     presses: list[int] = field(default_factory=list)
+    smart_presses: list[tuple[int, int]] = field(default_factory=list)
+    smart_releases: list[tuple[int, int]] = field(default_factory=list)
     releases: list[int] = field(default_factory=list)
     analog_writes: list[tuple[int, int]] = field(default_factory=list)
     serial_writes: list[tuple[int, str]] = field(default_factory=list)
@@ -298,12 +303,29 @@ class FakeProcessor:
                         await self._press(writer, join)
                     else:
                         self.releases.append(join)
+            elif datatype == p.DATA_SMART_OBJECT:
+                for obj, kind, record in p.smart_object_records(body):
+                    if kind != p.DATA_DIGITAL:
+                        continue
+                    for join, value in p.decode_digitals(record):
+                        if value:
+                            self.smart_presses.append((obj, join))
+                            await self._press_smart(obj, join)
+                        else:
+                            self.smart_releases.append((obj, join))
             elif datatype == p.DATA_ANALOG:
                 for join, value in p.decode_analogs(body):
                     self.analog_writes.append((join, value))
         elif ciptype == p.TYPE_EXTENDED_DATA:
             join = ((payload[5] << 8) | payload[6]) + 1
             self.serial_writes.append((join, payload[8:].decode("latin-1")))
+
+    async def _press_smart(self, obj: int, join: int) -> None:
+        items = self.smart_radio.get(obj, [])
+        if join not in items:
+            return
+        for item in items:
+            await self.push_smart_digital(self._current(), obj, item, int(item == join))
 
     async def _press(self, writer, join: int) -> None:
         for name, entry in self.entries.items():

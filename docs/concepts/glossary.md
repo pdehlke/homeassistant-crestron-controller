@@ -116,9 +116,10 @@ list's joins in the list's own range, so a list's text 11 is a different signal 
 the system's text 11. That is why a join map entry that reads from a list says which list, with
 `smart_object:`.
 
-Crestron Controller can read lists, but has not been tested against a real processor that sends
-them, so nobody has confirmed it works yet. It cannot change anything in a list. If your panels have
-no lists, SmartObjects do not affect you. See [reading lists](../configuration/reading-lists.md).
+Crestron Controller can read lists and, with writes turned on, choose from them, but has not been
+tested against a real processor that uses them, so nobody has confirmed either works yet. If your
+panels have no lists, SmartObjects do not affect you. See
+[reading and choosing from lists](../configuration/reading-lists.md).
 
 ### Press
 

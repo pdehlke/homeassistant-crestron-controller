@@ -19,7 +19,7 @@ import logging
 from collections.abc import Callable
 
 from .cipcore.client import CipClient, CipError
-from .cipcore.joinmap import PRESS_MOMENTARY, Entity, JoinMap
+from .cipcore.joinmap import PRESS_MOMENTARY, Entity, JoinMap, SelectOption
 from .cipcore.policy import ANALOG, DIGITAL, SERIAL, WriteRefused
 from .const import CONFIRM_ATTEMPTS, CONFIRM_TIMEOUT, IDLE_WATCH_INTERVAL
 
@@ -176,6 +176,32 @@ class Hub:
         value = self.digital(entity.subsystem, entity.feedback)
         return None if value is None else bool(value)
 
+    def selected(self, entity: Entity) -> SelectOption | None:
+        """The option whose feedback is high, or None when none or several are."""
+        obj = entity.smart_object or 0
+        high = [o for o in entity.options if self.digital(entity.subsystem, o.feedback, obj) == 1]
+        return high[0] if len(high) == 1 else None
+
+    def option_labels(self, entity: Entity) -> list[str]:
+        """What each option is called right now, in order, every label distinct.
+
+        A label read from the processor wins over the one in the join map, so a
+        list renamed on the processor is renamed here too. Home Assistant needs
+        the labels to be distinct, so a repeat gets a number.
+        """
+        obj = entity.smart_object or 0
+        labels: list[str] = []
+        for i, option in enumerate(entity.options, start=1):
+            text = None
+            if option.name_serial is not None:
+                text = (self.serial(option.name_serial, obj) or "").strip() or None
+            label = text or option.name or f"Option {i}"
+            unique, n = label, 2
+            while unique in labels:
+                unique, n = f"{label} ({n})", n + 1
+            labels.append(unique)
+        return labels
+
     # ---- the shared slot ---------------------------------------------------
 
     def _touch(self) -> None:
@@ -238,7 +264,9 @@ class Hub:
         async with self.lock:
             try:
                 await self._enter(entity)
-                await self.client.async_press(join, entity.subsystem, hold)
+                await self.client.async_press(
+                    join, entity.subsystem, hold, entity.smart_object or 0
+                )
             except (CipError, WriteRefused, OSError) as err:
                 raise HubError(f"{entity.name}: {err}") from err
             finally:
@@ -250,6 +278,28 @@ class Hub:
             try:
                 await self._enter(entity)
                 await self.client.async_set_analog(join, value, entity.subsystem)
+            except (CipError, WriteRefused, OSError) as err:
+                raise HubError(f"{entity.name}: {err}") from err
+            finally:
+                self._touch()
+
+    async def async_select(self, entity: Entity, option: SelectOption) -> None:
+        """Choose an option by pressing its join, unless it is already the one chosen.
+
+        One press and no retry. Unlike a toggle, pressing an item is not undone
+        by a second press, so there is nothing to synthesise; but the encoding
+        has never been seen accepted, so a failed choice is left visible rather
+        than hammered. See docs/adr/0013-writing-to-smartobjects.md.
+        """
+        self._check_ready(entity)
+        async with self.lock:
+            try:
+                await self._enter(entity)
+                if self.selected(entity) == option:
+                    return
+                await self.client.async_press(
+                    option.press, entity.subsystem, None, entity.smart_object or 0
+                )
             except (CipError, WriteRefused, OSError) as err:
                 raise HubError(f"{entity.name}: {err}") from err
             finally:

@@ -35,8 +35,10 @@ Note: 'Gway' entries can read ONLINE with no panel connected. ...
 
 `(none)` is joins outside any subsystem; `entered` is joins after an `--enter` press. Serial joins
 are not grouped. A `SmartObject N: ...` line per list follows when lists sent anything; their joins
-go in a join map with `smart_object: N` on a `sensor` or `binary_sensor` only. SmartObject support
-is untested on real hardware; tell the user so and ask them to report the result.
+go in a join map with `smart_object: N` on a `sensor` or `binary_sensor` to read them, or a `button`
+or `select` to press them. SmartObject support is untested on real hardware, and pressing inside a
+list uses an encoding no processor has been seen to accept; tell the user so, suggest reading
+before pressing, and ask them to report the result.
 
 The gated-program result: about a dozen digitals, a couple of analogs and over a hundred serials
 (labels), with nothing moving when lights change. Observed on a real processor that accepted

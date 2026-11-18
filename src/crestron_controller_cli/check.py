@@ -46,9 +46,17 @@ def run(args) -> int:
             print(f"  {sub.name}: entry d{sub.entry_join}, quiet {sub.quiet_seconds}s")
     policy = jm.policy(enabled=True)
     print("with writes enabled, Home Assistant may write:")
-    for kind in KINDS:
-        print(f"  {kind}: {_ranges(policy.allow.get(kind, ()))}")
+    _lists(policy.allow, policy.object_allow)
     print("never written, whatever else happens:")
-    for kind in KINDS:
-        print(f"  {kind}: {_ranges(jm.never_write.get(kind, ()))}")
+    _lists(jm.never_write, jm.never_write_objects)
     return 0
+
+
+def _lists(program: dict, objects: dict) -> None:
+    for kind in KINDS:
+        print(f"  {kind}: {_ranges(program.get(kind, ()))}")
+    for obj, sets in sorted(objects.items()):
+        # Only what is there: a SmartObject with nothing in it is noise.
+        shown = [f"{kind} {_ranges(sets[kind])}" for kind in KINDS if sets.get(kind)]
+        if shown:
+            print(f"  SmartObject {obj} (untested on real hardware): {'; '.join(shown)}")

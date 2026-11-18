@@ -49,7 +49,8 @@ seen on a processor in this project.
 | Digital and analog joins in EXTENDED_DATA (type `12`) | processor to client | From rellis. Not observed: the development system's processors have only been seen to send serials this way. |
 | Several join records in one data frame | processor to client | From rellis. Not observed. |
 | Record types `27`, `2A` and `34` inside type `05` | processor to client | From rellis. Not observed. |
-| SmartObject joins (record types `38` and `39`) | processor to client | From rellis, which captured them from live processors. Not observed by this project. Read only; nothing writes into a SmartObject. |
+| SmartObject joins (record types `38` and `39`) | processor to client | From rellis, which captured them from live processors. Not observed by this project. |
+| Digital press inside a SmartObject | client to processor | From rellis. Never seen accepted, by this project or by rellis. |
 
 The analog write caveat in full: the system this was developed on had no program logic that
 accepts an analog value from a panel. Its only two analog joins were feedback-only, and two writes
@@ -143,7 +144,7 @@ The record types:
 | `27` | Digital joins, repeated. Decoded like `00`. From rellis. |
 | `2A` | Serial join, unmangled. Decoded like `15`. From rellis. |
 | `34` | Serial join, extended. Decoded like `15`. Our own serial writes use it. |
-| `38`, `39` | SmartObject joins. Read, not written; see below. From rellis. |
+| `38`, `39` | SmartObject joins, read and pressed; see below. From rellis. |
 
 ### SmartObject joins (record types 38 and 39)
 
@@ -179,6 +180,19 @@ The client treats both types alike, as rellis does. It also:
 SmartObject digitals arriving during an entry or re-poll are collected and merged like any other,
 under the subsystem being entered. The decision and the options rejected are in
 [ADR 0012](../adr/0012-smartobject-joins-are-their-own-namespace.md).
+
+A press inside a SmartObject, from a `select` or a `button` with `smart_object:`, is an ordinary
+digital press record wrapped the same way and sent in a DATA frame (`smart_digital_packet()`),
+following rellis's `pack_smart_object()`. Pressing join 4011 in object 7 is:
+
+```text
+05 00 0c 00 00 09 38 00 00 00 07 03 00 aa 0f      press
+05 00 0c 00 00 09 38 00 00 00 07 03 00 aa 8f      release
+```
+
+No processor has been seen to accept this, by this project or by rellis. Each press is checked
+against that object's own allow and never-write lists; see
+[ADR 0013](../adr/0013-writing-to-smartobjects.md).
 
 ### Digital joins (datatype 00)
 

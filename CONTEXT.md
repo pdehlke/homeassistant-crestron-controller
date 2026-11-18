@@ -58,10 +58,15 @@ press join, sometimes not.
 pages. Written `also_reports` in a join map.
 
 **SmartObject**: a list on a panel page (sources, rooms, a playlist), numbered as an object. Its
-joins are a namespace of their own: object 3's serial 11 is not the program's serial 11. Read-only
-here, keyed by `(kind, join, smart object)` with object 0 for the program's own joins, and not
-verified on real hardware
-([ADR 0012](./docs/adr/0012-smartobject-joins-are-their-own-namespace.md)).
+joins are a namespace of their own: object 3's serial 11 is not the program's serial 11. Keyed by
+`(kind, join, smart object)` with object 0 for the program's own joins, with separate allow and
+never-write lists per object. Read by sensors and binary sensors, pressed by buttons and selects.
+Not verified on real hardware
+([ADR 0012](./docs/adr/0012-smartobject-joins-are-their-own-namespace.md),
+[ADR 0013](./docs/adr/0013-writing-to-smartobjects.md)).
+
+**Select**: a join map entity offering one of several options, each a press join and a feedback
+join, usually the items of a SmartObject list. Presses once, never retries.
 
 **Registration dump**: the burst of join values a processor sends after a client registers and
 asks for an update. Ends with an end-of-query marker.

@@ -10,10 +10,11 @@ This project began as a fork of DosMan's CresnetMon, the Cresnet bus monitor Dos
 rellis-erigon's Crestron-CIP-HA. All three are credited in full in
 [disclaimer and credits](./docs/about/disclaimer-and-credits.md).
 
-> **SmartObjects (lists on a panel) are not tested or confirmed working.** Reading them is
-> implemented and tested only against a simulated processor; no one has yet seen it work with a real
-> Crestron system, and nothing can be written to a list. See
-> [reading lists](./docs/configuration/reading-lists.md).
+> **SmartObjects (lists on a panel) are not tested or confirmed working.** Reading them and
+> choosing from them are implemented and tested only against a simulated processor; no one has yet
+> seen either work with a real Crestron system. Choosing from a list sends commands in a form no
+> processor has been seen to accept. See
+> [reading and choosing from lists](./docs/configuration/reading-lists.md).
 
 This file is a table of contents. New users should start with
 [what you need](./docs/getting-started/what-you-need.md) and read the getting-started section in
@@ -72,8 +73,8 @@ order.
 - [Dashboards](./docs/configuration/dashboards.md): an example dashboard using built-in cards.
 - [Encrypted CIP](./docs/configuration/encrypted-cip.md): turning on encryption, how Home Assistant
   recognises your processor's certificate, and the older-encryption setting for old processors.
-- [Reading lists](./docs/configuration/reading-lists.md): showing what a panel's lists (sources,
-  rooms, playlists) say, read-only. **Not tested on real hardware.**
+- [Reading and choosing from lists](./docs/configuration/reading-lists.md): showing what a panel's
+  lists (sources, rooms, playlists) say, and choosing from them. **Not tested on real hardware.**
 
 ## Troubleshooting
 

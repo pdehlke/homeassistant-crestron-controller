@@ -243,15 +243,15 @@ async def test_object_and_program_entities_never_update_each_other(processor):
 @pytest.mark.parametrize(
     ("entity", "message"),
     [
-        ({"type": "light", "name": "L", "feedback": 5, "smart_object": 3}, "read-only"),
-        ({"type": "button", "name": "B", "join": 5, "smart_object": 3}, "read-only"),
-        ({"type": "number", "name": "N", "analog": 5, "smart_object": 3}, "read-only"),
+        ({"type": "light", "name": "L", "feedback": 5, "smart_object": 3}, "cannot use"),
+        ({"type": "switch", "name": "W", "feedback": 5, "smart_object": 3}, "cannot use"),
+        ({"type": "number", "name": "N", "analog": 5, "smart_object": 3}, "cannot use"),
         ({"type": "sensor", "name": "S", "serial": 5, "smart_object": 0}, "outside"),
         ({"type": "sensor", "name": "S", "serial": 5, "smart_object": "3"}, "whole number"),
         ({"type": "sensor", "name": "S", "serial": 5, "smart_object": True}, "whole number"),
     ],
 )
-def test_the_join_map_accepts_smart_object_only_where_it_reads(entity, message):
+def test_the_join_map_accepts_smart_object_only_where_it_belongs(entity, message):
     with pytest.raises(JoinMapError, match=message):
         parse({"entities": [entity]})
 

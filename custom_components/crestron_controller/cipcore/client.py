@@ -810,10 +810,20 @@ class CipClient:
                 f"{self.current_subsystem or 'no'} subsystem"
             )
 
-    async def _press(self, join: int, hold: float | None = None) -> None:
-        """Tap a digital join. The policy check here is the one that covers every write."""
-        self.policy.check(DIGITAL, join)
+    async def _press(self, join: int, hold: float | None = None, obj: int = 0) -> None:
+        """Tap a digital join. The policy check here is the one that covers every write.
+
+        `obj` presses a join inside that SmartObject instead of the program's
+        own. That encoding has never been seen accepted by a processor.
+        """
+        self.policy.check(DIGITAL, join, obj)
         hold = self.timing.press_hold_seconds if hold is None else hold
+
+        def packet(pressed: bool) -> bytes:
+            if obj:
+                return p.smart_digital_packet(obj, join, pressed)
+            return p.digital_packet(join, pressed)
+
         # Captured now rather than re-read in the finally: _close() nulls
         # self._writer before it cancels the bring-up task, so a press cancelled
         # by exactly that path would otherwise find nothing and leave the join
@@ -821,9 +831,9 @@ class CipClient:
         writer = self._writer
         released = False
         try:
-            await self._send(p.digital_packet(join, True))
+            await self._send(packet(True))
             await asyncio.sleep(hold)
-            await self._send(p.digital_packet(join, False))
+            await self._send(packet(False))
             released = True
         finally:
             if not released and writer is not None:
@@ -832,14 +842,14 @@ class CipClient:
                 # dimmers and can overwrite a learnable scene. write() is not a
                 # coroutine, so a cancellation already in flight cannot preempt it.
                 with contextlib.suppress(Exception):
-                    writer.write(p.digital_packet(join, False))
+                    writer.write(packet(False))
 
     async def async_press(
-        self, join: int, subsystem: str | None, hold: float | None = None
+        self, join: int, subsystem: str | None, hold: float | None = None, obj: int = 0
     ) -> None:
         """Tap a digital join, refusing unless the slot is in the named subsystem."""
-        self._require_subsystem(f"d{join}", subsystem)
-        await self._press(join, hold)
+        self._require_subsystem(f"o{obj}:d{join}" if obj else f"d{join}", subsystem)
+        await self._press(join, hold, obj)
 
     async def async_set_analog(self, join: int, value: int, subsystem: str | None) -> None:
         self._require_subsystem(f"a{join}", subsystem)

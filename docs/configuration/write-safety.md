@@ -44,7 +44,12 @@ Once writes are on, the link may write exactly:
 - for each light or switch, its press join, or its on and off joins;
 - the brightness join of a light whose brightness is `writable: true`;
 - each button's join;
-- the analog join of each number with `writable: true`.
+- the analog join of each number with `writable: true`;
+- each option's press join, for a select.
+
+A button or select that names a list with `smart_object:` presses inside that list, so its joins go
+on that list's allow list rather than the program's. Pressing inside a list has never been seen to
+work on a real processor; see [reading and choosing from lists](./reading-lists.md).
 
 Everything else is refused, including joins that appear only in `also_reports`, binary sensors and
 sensors. `crestron-controller check FILE` prints this list in ranges, so you can read exactly what
@@ -64,6 +69,20 @@ Joins and quoted `"low-high"` ranges, per kind (`digital`, `analog`, `serial`). 
 - makes the whole join map invalid if any entity would write a listed join, or if a subsystem's
   entry join is listed, so a dangerous map never loads at all;
 - does not stop reading. A listed join can still be `also_reports`, a binary sensor or a sensor.
+
+A list on a panel ([SmartObject](../concepts/glossary.md#smartobject)) numbers its joins
+separately: digital 9 inside list 3 is not the program's digital 9. So a list has its own
+never-write entries, under `smart_objects`, and the top-level lists do not cover it:
+
+```yaml
+never_write:
+  digital: ["200-219", 45]
+  smart_objects:
+    3: {digital: ["9-12"]}
+```
+
+If you map anything that presses inside a list, look through that list's joins for anything
+dangerous first, exactly as you would for the program's own.
 
 The command-line tool's `--never-write` option applies the same rule to the one join `--enter` may
 press.

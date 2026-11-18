@@ -48,7 +48,8 @@ The join record walk in `custom_components/crestron_controller/cipcore/protocol.
 `custom_components/crestron_cip/protocol.py` (`iter_records()` and `_scan_cresnet()`), and the
 record types it accepts come from that project's list, as does the UTF-16 format bit that
 `decode_serial()` reads. The SmartObject layout decoded by `smart_object_records()` follows that
-project's `split_object_joins()`, and the test fixtures in `tests/core/test_smart_objects.py` follow
+project's `split_object_joins()`, and the one `smart_object_packet()` encodes follows its
+`pack_smart_object()`, and the test fixtures in `tests/core/test_smart_objects.py` follow
 the layout of frames it captured, with their text replaced. The code was re-implemented rather than copied, so its notice is
 reproduced here.
 

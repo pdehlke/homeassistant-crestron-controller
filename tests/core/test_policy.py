@@ -31,4 +31,4 @@ def test_kinds_are_separate():
     policy = make()
     policy.check(ANALOG, 5)
     assert not policy.permits(ANALOG, 10)
-    assert policy.conflicts() == [(DIGITAL, 20)]
+    assert policy.conflicts() == [(DIGITAL, 20, 0)]

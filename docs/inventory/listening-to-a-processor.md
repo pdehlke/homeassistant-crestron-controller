@@ -85,7 +85,7 @@ SmartObject 3: 12 digital and analog, 8 serial (untested on real hardware)
 
 Lists ([SmartObjects](../concepts/glossary.md#smartobject)) number their joins separately, so these
 are not counted in the lines above. Reading them has not been tested on a real processor; see
-[reading lists](../configuration/reading-lists.md).
+[reading and choosing from lists](../configuration/reading-lists.md).
 
 ## On a program that is not gated
 
@@ -210,7 +210,7 @@ subsystems:
 ```
 
 List joins come last, after a comment saying they are untested, as entries with `smart_object:`
-([reading lists](../configuration/reading-lists.md)):
+([reading and choosing from lists](../configuration/reading-lists.md)):
 
 ```yaml
   - {type: sensor, name: "List 3 serial 11", serial: 11, smart_object: 3}  # 'Item one'

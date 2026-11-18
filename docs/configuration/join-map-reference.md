@@ -91,11 +91,26 @@ never_write:
 | `digital` | list | empty | Digital joins never to write. |
 | `analog` | list | empty | Analog joins never to write. |
 | `serial` | list | empty | Serial joins never to write. |
+| `smart_objects` | mapping | empty | Joins inside lists never to write, keyed by list number, each with its own `digital`, `analog` and `serial` lists. |
 
 Each list holds join numbers and `"low-high"` range strings, inclusive, in quotes so YAML reads them
 as text. The lists apply to the whole link, across every subsystem: a join listed here is never
 written in any subsystem. Reading a listed join is fine; it may appear in `also_reports`, a
 `binary_sensor` or a `sensor`.
+
+A list ([SmartObject](../concepts/glossary.md#smartobject)) numbers its joins separately, so its
+never-write list is separate too. The top-level lists never cover a list's joins, and a list's
+entries never cover the program's:
+
+```yaml
+never_write:
+  digital: [45]
+  smart_objects:
+    3: {digital: ["9-12"]}
+```
+
+Writing into lists is not tested on real hardware; see
+[reading and choosing from lists](./reading-lists.md).
 
 ## timing
 
@@ -131,7 +146,7 @@ A list. Each item is a mapping with a `type` and the keys that type allows.
 
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `type` | one of `light`, `switch`, `binary_sensor`, `button`, `sensor`, `number` | required | The Home Assistant platform. |
+| `type` | one of `light`, `switch`, `binary_sensor`, `button`, `sensor`, `number`, `select` | required | The Home Assistant platform. |
 | `name` | text, required, not blank | required | The entity's name. Home Assistant shows it under the processor's device. |
 | `id` | text of `a-z`, `0-9` and `_` | made from `name` | A stable identifier within this join map. It becomes part of the entity's unique ID, so changing it creates a new entity. Generated from the name by lowercasing and turning runs of other characters into `_`. Set it explicitly when two names would produce the same id, or when you want to rename an entity without losing its history. |
 | `subsystem` | subsystem name | the default subsystem | Which subsystem's joins this entity reads and writes. Only allowed when the map declares `subsystems:`. |
@@ -168,7 +183,7 @@ A read-only digital join.
 | --- | --- | --- | --- |
 | `join` | join, required | none | The digital join to read. |
 | `device_class` | a Home Assistant binary sensor device class, such as `door` or `garage_door` | none | How Home Assistant presents it. Must be a class Home Assistant knows, or the entity fails to load. |
-| `smart_object` | whole number, 1 or more | none | Read `join` inside this list instead of the program's own joins. Not tested on real hardware; see [reading lists](./reading-lists.md). |
+| `smart_object` | whole number, 1 or more | none | Read `join` inside this list instead of the program's own joins. Not tested on real hardware; see [reading and choosing from lists](./reading-lists.md). |
 
 ### button
 
@@ -178,6 +193,7 @@ A press and nothing else: a scene, a macro, an "all off".
 | --- | --- | --- | --- |
 | `join` | join, required | none | The digital join to press. |
 | `hold_seconds` | number | `timing.press_hold_seconds` | How long to hold this press. Only change it if a program needs a longer press; remember that holding is not pressing. |
+| `smart_object` | whole number, 1 or more | none | Press `join` inside this list instead of the program's own joins. Not tested on real hardware; see [reading and choosing from lists](./reading-lists.md). |
 
 A button is available whenever its link is connected and synced, because it has nothing to read.
 
@@ -192,7 +208,7 @@ A read-only analog or serial join. Exactly one of `analog` or `serial`.
 | `scale` | `raw` or `percent` | `raw` | Analog only. `percent` shows the value as a percentage of 65535, to one decimal place. Not allowed with `serial`. |
 | `unit` | text | `%` when `scale: percent`, otherwise none | The unit of measurement. |
 | `device_class` | a Home Assistant sensor device class | none | Must be a class Home Assistant knows. |
-| `smart_object` | whole number, 1 or more | none | Read `analog` or `serial` inside this list instead of the program's own joins. Not tested on real hardware; see [reading lists](./reading-lists.md). |
+| `smart_object` | whole number, 1 or more | none | Read `analog` or `serial` inside this list instead of the program's own joins. Not tested on real hardware; see [reading and choosing from lists](./reading-lists.md). |
 
 Serial sensors are available whenever the link is connected and synced, whatever subsystem they
 name. On the system this was developed on, label serials arrived once per session rather than once
@@ -215,6 +231,46 @@ An analog join with a range, shown as a slider. Read-only unless `writable: true
 `min` and `max` must satisfy `0 <= min < max <= top`, where top is 100 for `percent` and 65535 for
 `raw`.
 
+### select
+
+A choice of one from several, such as a source from a panel's list. Choosing an option presses its
+join. Only `writable` in the sense that writes must be on for the link; with writes off it shows the
+current choice and refuses to change it.
+
+```yaml
+- type: select
+  name: Den source
+  smart_object: 3
+  options:
+    - {name: Radio, press: 1}
+    - {press: 2, feedback: 12, name_serial: 22}
+```
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `options` | list, at least one | required | The choices, in order. |
+| `smart_object` | whole number, 1 or more | none | Use joins inside this list. Leave it out to build a select from the program's own buttons. Not tested on real hardware; see [reading and choosing from lists](./reading-lists.md). |
+
+Each option takes:
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `press` | join, required | none | The digital join pressed to choose this option. |
+| `feedback` | join | same as `press` | The digital join that is high while this option is the chosen one. |
+| `name` | text | none | What the option is called. |
+| `name_serial` | join | none | A serial join whose text names the option. Once the processor sends text, it is used instead of `name`. |
+
+Every option needs `name`, `name_serial`, or both. Within one select, no two options may share a
+`press` join, a `feedback` join or a `name`.
+
+The current option is the one whose feedback join is high. If none is high, or more than one, the
+select shows no current option. An option with no name and no text yet is shown as `Option N`, and
+a label that repeats another gets a number, such as `Radio (2)`.
+
+Choosing an option does nothing if it is already the current one. Otherwise it presses the join
+once and does not retry; the select changes when the processor's feedback does. If the select never
+changes, check the `press` and `feedback` joins with `crestron-controller watch`.
+
 ## Rules across the whole map
 
 - Every entity's `id` must be unique in the file.
@@ -226,6 +282,9 @@ An analog join with a range, shown as a slider. Read-only unless `writable: true
 - No two subsystems may share an entry join.
 - No entry join may be on `never_write.digital`.
 - No entity may write a join on the never-write list of the same kind.
+- Joins inside a list ([SmartObject](../concepts/glossary.md#smartobject)) are different joins from
+  the program's own with the same number, and from another list's. These rules apply within each
+  list separately, and a list join is checked against that list's never-write entries.
 
 ## What Home Assistant may write
 
@@ -235,7 +294,11 @@ With writes on, the allow list is exactly:
 - for a light or switch, its `press_join`, `on_join` and `off_join` (digital), and its brightness
   join (analog) if `writable: true`;
 - for a button, its `join` (digital);
-- for a number with `writable: true`, its `analog` join.
+- for a number with `writable: true`, its `analog` join;
+- for a select, every option's `press` join (digital).
+
+A button or select with `smart_object:` adds its joins to that list's allow list instead of the
+program's.
 
 Nothing else can be written. `crestron-controller check FILE` prints this list, and the never-write
 list, in ranges.
@@ -275,7 +338,7 @@ name. Cross-entity errors start with the entity's id.
 | Message | Meaning and fix |
 | --- | --- |
 | `never_write: must be a mapping of digital/analog/serial lists` | Put the lists under `digital:`, `analog:` or `serial:`. |
-| `never_write: unknown key(s): ...` | Only `digital`, `analog` and `serial`. |
+| `never_write: unknown key(s): ...` | Only `digital`, `analog`, `serial` and `smart_objects`. |
 | `never_write.<kind>: expected a list, got ...` | Write `[45]`, not `45`. |
 | `never_write.<kind>: '...' is not a join or a 'low-high' range` | Ranges are quoted strings like `"200-219"`. |
 | `never_write.<kind>: range '...' runs backwards` | Write the lower number first. |
@@ -319,7 +382,15 @@ name. Cross-entity errors start with the entity's id.
 | `...: min must be a number, got ...` (and `max`, `step`) | Use plain numbers. |
 | `...: need 0 <= min < max <= 100` (or `65535`) | Fix the range. |
 | `...: <key> must be a whole number, got ...` / `... is outside 1-32768` | A join key holds something that is not a valid join number. |
-| `...: smart_object is read-only for now; only a sensor or binary_sensor can read a SmartObject` | Lists can be read but not written. Remove `smart_object` from the light, switch, button or number. |
+| `never_write.smart_objects.N: the key must be a SmartObject number, 1 or more` | Write the list number without quotes: `3:`, not `"3":`. |
+| `never_write.smart_objects: must map SmartObject numbers to lists` / `never_write.smart_objects.N: must be a mapping ...` | Use the layout in [never_write](#never_write). |
+| `...: a <type> cannot use a SmartObject; only binary_sensor, sensor, button, select can` | Lights, switches and numbers cannot use a list. Remove `smart_object`. |
+| `...: a select needs a list of options` | Add `options:` with at least one option. |
+| `... options[N]: needs a press join` | Every option needs `press`. |
+| `... options[N]: needs a name, a name_serial, or both` | Give the option a `name`, or a `name_serial` to read its name from. |
+| `... options[N]: unknown key(s): ...` | An option takes only `name`, `name_serial`, `press` and `feedback`. |
+| `... options[N]: name must be text` | Use non-blank text. |
+| `...: two options share a press join` (or `feedback join`, or `name`) | Each option needs its own. |
 | `...: smart_object must be a whole number, got ...` / `smart_object ... is outside 1-4294967295` | Use the list's number as `crestron-controller listen` prints it, without quotes. |
 
 ### Across entities
@@ -327,9 +398,9 @@ name. Cross-entity errors start with the entity's id.
 | Message | Meaning and fix |
 | --- | --- |
 | `entities[N]: id '...' is already used by entities[M]; give one of them an explicit id` | Two entities have the same id, often because two names slug the same. |
-| `<id>: writes <kind> join N, which <other id> also writes` | Two entities in the same subsystem would write one join. Keep one; make the other a `binary_sensor` if you want to read it twice. |
+| `<id>: writes <kind> join N, which <other id> also writes` (with `in SmartObject M` for a list join) | Two entities in the same subsystem would write one join. Keep one; make the other a `binary_sensor` if you want to read it twice. |
 | `subsystems.entries.<name>: entry join N is on the never-write list, so this subsystem could never be entered` | Remove it from `never_write`, or remove the subsystem. |
-| `<id>: would write <kind> join N, which is on the never-write list. ...` | The entity would press a forbidden join. If the load has a safe alias elsewhere in the program, map that one as the join to press and keep the forbidden one in `also_reports`. |
+| `<id>: would write <kind> join N, which is on the never-write list. ...` (with `in SmartObject M` for a list join) | The entity would press a forbidden join. If the load has a safe alias elsewhere in the program, map that one as the join to press and keep the forbidden one in `also_reports`. |
 
 ### Errors from Home Assistant, not the schema
 

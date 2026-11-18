@@ -40,7 +40,7 @@ Wait for `ready` before pressing anything. The joins the processor sends on conn
 state, not something you just did, so they are not printed. After that, each line is one change:
 seconds since the tool started, the join's kind and number (`d` digital, `a` analog, `s` serial)
 and its new value. A join inside a list is written with the list's number first, such as `o3:d5`
-for digital 5 in list 3; see [reading lists](../configuration/reading-lists.md), which also says
+for digital 5 in list 3; see [reading and choosing from lists](../configuration/reading-lists.md), which also says
 why list support is untested. Digital values are 1 (on) and 0 (off), analog values are numbers from 0 to
 65535, and serial values are text in quotes.
 

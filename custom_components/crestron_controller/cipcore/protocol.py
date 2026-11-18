@@ -199,6 +199,30 @@ def smart_object_records(body: bytes, _depth: int = 0) -> list[tuple[int, int, b
     return out
 
 
+def smart_object_packet(obj: int, record: bytes) -> bytes:
+    """Wrap one join record, type byte first, in a SmartObject record addressed to `obj`.
+
+    The layout is rellis-erigon/Crestron-CIP-HA's pack_smart_object(): a DATA
+    frame holding one 0x38 record whose body is the object number, 32 bits
+    big-endian, then the inner record behind a one-byte length. No processor,
+    for this project or for rellis, has been seen to accept one. See
+    docs/adr/0013-writing-to-smartobjects.md.
+    """
+    if not 1 <= obj <= 0xFFFFFFFF:
+        raise ValueError(f"SmartObject {obj} is outside 1-4294967295")
+    if not 1 <= len(record) <= 0xFF:
+        raise ValueError(f"a SmartObject item holds 1-255 bytes, got {len(record)}")
+    body = bytes([DATA_SMART_OBJECT]) + obj.to_bytes(4, "big") + bytes([len(record)]) + record
+    return frame(TYPE_DATA, bytes([0x00, len(body) >> 8, len(body) & 0xFF]) + body)
+
+
+def smart_digital_packet(obj: int, join: int, pressed: bool) -> bytes:
+    """A digital press or release inside a SmartObject, encoded as digital_packet's body."""
+    n = _check_join(join)
+    record = bytes([DATA_DIGITAL, n & 0xFF, ((n >> 8) & 0x7F) | (0x00 if pressed else 0x80)])
+    return smart_object_packet(obj, record)
+
+
 def decode_digitals(body: bytes) -> list[tuple[int, int]]:
     """Decode a digital data body into (join, value) pairs.
 

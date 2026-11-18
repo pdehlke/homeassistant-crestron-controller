@@ -27,7 +27,12 @@ BINARY_SENSOR = "binary_sensor"
 BUTTON = "button"
 SENSOR = "sensor"
 NUMBER = "number"
-ENTITY_TYPES = (LIGHT, SWITCH, BINARY_SENSOR, BUTTON, SENSOR, NUMBER)
+SELECT = "select"
+ENTITY_TYPES = (LIGHT, SWITCH, BINARY_SENSOR, BUTTON, SENSOR, NUMBER, SELECT)
+# Entity types that may name a SmartObject. Lights, switches and numbers may
+# not yet: nothing has needed them, and each would widen what an unverified
+# encoding can write. See docs/adr/0013-writing-to-smartobjects.md.
+SMART_OBJECT_TYPES = (BINARY_SENSOR, SENSOR, BUTTON, SELECT)
 
 # How a light or switch is driven. See docs/configuration/press-modes.md.
 PRESS_TOGGLE = "toggle"
@@ -43,6 +48,17 @@ _ID = re.compile(r"^[a-z0-9_]+$")
 
 class JoinMapError(ValueError):
     """The join map is invalid. The message names the entry and the fix."""
+
+
+@dataclass(frozen=True)
+class SelectOption:
+    """One choice in a select: the join pressed to choose it and the join that reports it."""
+
+    press: int
+    feedback: int
+    name: str | None = None
+    # A serial join whose text, once seen, names the option instead of `name`.
+    name_serial: int | None = None
 
 
 @dataclass(frozen=True)
@@ -76,9 +92,12 @@ class Entity:
     step: float | None = None
     writable: bool = False
     icon: str | None = None
-    # sensor, binary_sensor: read joins inside this SmartObject instead of the
-    # program's own range. See docs/adr/0012-smartobject-joins-are-their-own-namespace.md.
+    # sensor, binary_sensor, button, select: use joins inside this SmartObject
+    # instead of the program's own range. See
+    # docs/adr/0012-smartobject-joins-are-their-own-namespace.md.
     smart_object: int | None = None
+    # select
+    options: tuple[SelectOption, ...] = ()
 
     @property
     def assumed_state(self) -> bool:
@@ -111,6 +130,10 @@ class Entity:
             out.append((ANALOG, self.analog))
         if self.serial is not None:
             out.append((SERIAL, self.serial))
+        for option in self.options:
+            out.append((DIGITAL, option.feedback))
+            if option.name_serial is not None:
+                out.append((SERIAL, option.name_serial))
         return out
 
     def writes(self) -> list[tuple[str, int]]:
@@ -126,6 +149,8 @@ class Entity:
             out.append((DIGITAL, self.join))
         elif self.type == NUMBER and self.writable and self.analog is not None:
             out.append((ANALOG, self.analog))
+        elif self.type == SELECT:
+            out += [(DIGITAL, option.press) for option in self.options]
         return sorted(set(out))
 
 
@@ -136,21 +161,31 @@ class JoinMap:
     idle_return_seconds: float = 5.0
     repoll_after_entry: bool = True
     never_write: dict[str, frozenset[int]] = field(default_factory=dict)
+    # SmartObject -> kind -> joins inside that object that must never be written.
+    never_write_objects: dict[int, dict[str, frozenset[int]]] = field(default_factory=dict)
     timing: Timing = field(default_factory=Timing)
     entities: tuple[Entity, ...] = ()
 
+    def denied(self, obj: int = 0) -> dict[str, frozenset[int]]:
+        """The never-write list for the program's joins, or for one SmartObject's."""
+        return self.never_write if obj == 0 else self.never_write_objects.get(obj, {})
+
     def policy(self, enabled: bool) -> WritePolicy:
         """The write policy this map implies, with writes on or off."""
-        allow: dict[str, set[int]] = {kind: set() for kind in KINDS}
+        allow: dict[int, dict[str, set[int]]] = {0: {kind: set() for kind in KINDS}}
         for sub in self.subsystems.values():
-            allow[DIGITAL].add(sub.entry_join)
+            allow[0][DIGITAL].add(sub.entry_join)
         for entity in self.entities:
+            bucket = allow.setdefault(entity.smart_object or 0, {k: set() for k in KINDS})
             for kind, join in entity.writes():
-                allow[kind].add(join)
+                bucket[kind].add(join)
+        frozen = {obj: {k: frozenset(v) for k, v in sets.items()} for obj, sets in allow.items()}
         return WritePolicy(
             enabled=enabled,
-            allow={k: frozenset(v) for k, v in allow.items()},
+            allow=frozen.pop(0),
             deny=dict(self.never_write),
+            object_allow=frozen,
+            object_deny={obj: dict(sets) for obj, sets in self.never_write_objects.items()},
         )
 
 
@@ -227,9 +262,10 @@ _KNOWN_KEYS = {
     LIGHT: {"feedback", "also_reports", "press", "press_join", "on_join", "off_join", "brightness"},
     SWITCH: {"feedback", "also_reports", "press", "press_join", "on_join", "off_join"},
     BINARY_SENSOR: {"join", "device_class", "smart_object"},
-    BUTTON: {"join", "hold_seconds"},
+    BUTTON: {"join", "hold_seconds", "smart_object"},
     SENSOR: {"analog", "serial", "scale", "unit", "device_class", "smart_object"},
     NUMBER: {"analog", "scale", "unit", "min", "max", "step", "writable"},
+    SELECT: {"options", "smart_object"},
 }
 _COMMON_KEYS = {"type", "id", "name", "subsystem", "icon"}
 
@@ -243,12 +279,9 @@ def _parse_entity(
     kind = raw.get("type")
     if kind not in ENTITY_TYPES:
         raise JoinMapError(f"{where}: type must be one of {', '.join(ENTITY_TYPES)}")
-    if "smart_object" in raw and kind not in (SENSOR, BINARY_SENSOR):
-        # Writing into a SmartObject has never been seen to work, so nothing
-        # that can write may name one. See issue #4.
+    if "smart_object" in raw and kind not in SMART_OBJECT_TYPES:
         raise JoinMapError(
-            f"{where}: smart_object is read-only for now; only a sensor or binary_sensor "
-            "can read a SmartObject"
+            f"{where}: a {kind} cannot use a SmartObject; only {', '.join(SMART_OBJECT_TYPES)} can"
         )
     unknown = set(raw) - _COMMON_KEYS - _KNOWN_KEYS[kind]
     if unknown:
@@ -335,6 +368,8 @@ def _parse_entity(
                 )
             values["brightness_join"] = _join(bright["join"], where, "brightness join")
             values["brightness_writable"] = bool(bright.get("writable", False))
+    elif kind == SELECT:
+        values["options"] = _parse_options(raw.get("options"), where)
     elif kind in (BINARY_SENSOR, BUTTON):
         if raw.get("join") is None:
             raise JoinMapError(f"{where}: a {kind} needs a join")
@@ -371,6 +406,71 @@ def _parse_entity(
             if not 0 <= values["minimum"] < values["maximum"] <= top:
                 raise JoinMapError(f"{where}: need 0 <= min < max <= {top:g}")
     return Entity(**values)
+
+
+def _parse_options(raw: Any, where: str) -> tuple[SelectOption, ...]:
+    if not isinstance(raw, list) or not raw:
+        raise JoinMapError(f"{where}: a select needs a list of options")
+    options: list[SelectOption] = []
+    for i, item in enumerate(raw):
+        at = f"{where} options[{i}]"
+        if not isinstance(item, dict):
+            raise JoinMapError(f"{at}: each option must be a mapping")
+        unknown = set(item) - {"name", "name_serial", "press", "feedback"}
+        if unknown:
+            raise JoinMapError(f"{at}: unknown key(s): {', '.join(sorted(unknown))}")
+        if item.get("press") is None:
+            raise JoinMapError(f"{at}: needs a press join")
+        press = _join(item["press"], at, "press")
+        feedback = _opt_join(item, "feedback", at)
+        name = item.get("name")
+        if name is not None and (not isinstance(name, str) or not name.strip()):
+            raise JoinMapError(f"{at}: name must be text")
+        name_serial = _opt_join(item, "name_serial", at)
+        if name is None and name_serial is None:
+            raise JoinMapError(f"{at}: needs a name, a name_serial, or both")
+        options.append(
+            SelectOption(
+                press=press,
+                feedback=press if feedback is None else feedback,
+                name=None if name is None else name.strip(),
+                name_serial=name_serial,
+            )
+        )
+    for what in ("press", "feedback"):
+        joins = [getattr(o, what) for o in options]
+        if len(set(joins)) != len(joins):
+            raise JoinMapError(f"{where}: two options share a {what} join")
+    names = [o.name for o in options if o.name is not None]
+    if len(set(names)) != len(names):
+        raise JoinMapError(f"{where}: two options share a name")
+    return tuple(options)
+
+
+def _parse_never_write(raw: Any) -> tuple[dict[str, frozenset[int]], dict[int, dict]]:
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise JoinMapError("never_write: must be a mapping of digital/analog/serial lists")
+    unknown = set(raw) - set(KINDS) - {"smart_objects"}
+    if unknown:
+        raise JoinMapError(f"never_write: unknown key(s): {', '.join(sorted(unknown))}")
+    never_write = {kind: _join_set(raw.get(kind), f"never_write.{kind}") for kind in KINDS}
+    objects_raw = raw.get("smart_objects") or {}
+    if not isinstance(objects_raw, dict):
+        raise JoinMapError("never_write.smart_objects: must map SmartObject numbers to lists")
+    objects: dict[int, dict[str, frozenset[int]]] = {}
+    for obj, lists in objects_raw.items():
+        where = f"never_write.smart_objects.{obj}"
+        if isinstance(obj, bool) or not isinstance(obj, int) or not 1 <= obj <= 0xFFFFFFFF:
+            raise JoinMapError(f"{where}: the key must be a SmartObject number, 1 or more")
+        if not isinstance(lists, dict):
+            raise JoinMapError(f"{where}: must be a mapping of digital/analog/serial lists")
+        unknown = set(lists) - set(KINDS)
+        if unknown:
+            raise JoinMapError(f"{where}: unknown key(s): {', '.join(sorted(unknown))}")
+        objects[obj] = {kind: _join_set(lists.get(kind), f"{where}.{kind}") for kind in KINDS}
+    return never_write, objects
 
 
 def _parse_subsystems(raw: Any) -> tuple[dict[str, Subsystem], str | None, float, bool]:
@@ -451,13 +551,7 @@ def parse(raw: Any) -> JoinMap:
 
     subsystems, default, idle, repoll = _parse_subsystems(raw.get("subsystems"))
 
-    deny_raw = raw.get("never_write") or {}
-    if not isinstance(deny_raw, dict):
-        raise JoinMapError("never_write: must be a mapping of digital/analog/serial lists")
-    unknown = set(deny_raw) - set(KINDS)
-    if unknown:
-        raise JoinMapError(f"never_write: unknown key(s): {', '.join(sorted(unknown))}")
-    never_write = {kind: _join_set(deny_raw.get(kind), f"never_write.{kind}") for kind in KINDS}
+    never_write, never_write_objects = _parse_never_write(raw.get("never_write"))
 
     entities_raw = raw.get("entities") or []
     if not isinstance(entities_raw, list):
@@ -472,6 +566,7 @@ def parse(raw: Any) -> JoinMap:
         idle_return_seconds=idle,
         repoll_after_entry=repoll,
         never_write=never_write,
+        never_write_objects=never_write_objects,
         timing=_parse_timing(raw.get("timing")),
         entities=entities,
     )
@@ -493,13 +588,15 @@ def _check(jm: JoinMap) -> None:
     # A join may be read by several entities (a sensor and a light on the same
     # feedback is legitimate), but may be *written* by only one: two entities
     # pressing one toggle would each undo the other.
-    writers: dict[tuple[str | None, str, int], str] = {}
+    writers: dict[tuple[str | None, int, str, int], str] = {}
     for entity in jm.entities:
+        obj = entity.smart_object or 0
         for kind, join in entity.writes():
-            key = (entity.subsystem, kind, join)
+            key = (entity.subsystem, obj, kind, join)
             if key in writers and writers[key] != entity.id:
                 raise JoinMapError(
-                    f"{entity.id}: writes {kind} join {join}, which {writers[key]} also writes"
+                    f"{entity.id}: writes {kind} join {join}{_in_object(obj)}, which "
+                    f"{writers[key]} also writes"
                 )
             writers[key] = entity.id
 
@@ -510,9 +607,15 @@ def _check(jm: JoinMap) -> None:
                 "list, so this subsystem could never be entered"
             )
     for entity in jm.entities:
+        obj = entity.smart_object or 0
         for kind, join in entity.writes():
-            if join in jm.never_write.get(kind, frozenset()):
+            if join in jm.denied(obj).get(kind, frozenset()):
                 raise JoinMapError(
-                    f"{entity.id}: would write {kind} join {join}, which is on the never-write "
-                    "list. If the join has a safe alias elsewhere in the program, map that one."
+                    f"{entity.id}: would write {kind} join {join}{_in_object(obj)}, which is on "
+                    "the never-write list. If the join has a safe alias elsewhere in the "
+                    "program, map that one."
                 )
+
+
+def _in_object(obj: int) -> str:
+    return f" in SmartObject {obj}" if obj else ""
