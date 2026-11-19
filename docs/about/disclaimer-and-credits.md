@@ -43,6 +43,16 @@ the MIT licence, without warranty of any kind; see `LICENSE`.
   Its notes on EXTENDED_DATA frames, and on frames that hold several join records, are where this
   project's handling of both comes from. That part has not been checked against a real processor
   here; see [cip-wire-format.md](../protocol/cip-wire-format.md) and `THIRD_PARTY_NOTICES.md`.
+- **Construct-Themes-Showcase, by Alvaro Yurrita, and CwsDebug, by Mark Jervis.**
+  [alvaroyurrita/Construct-Themes-Showcase](https://github.com/alvaroyurrita/Construct-Themes-Showcase)
+  and [markjervis/CwsDebug](https://github.com/markjervis/CwsDebug), both MIT licensed. A trimmed
+  copy of a sample `.ch5z` project from each is part of the tests for the experimental x60/x70
+  panel project reader; see [panel project files](../inventory/panel-project-files.md) and
+  `THIRD_PARTY_NOTICES.md`.
+- **@crestron/ch5-crcomlib, by Crestron Electronics.**
+  [@crestron/ch5-crcomlib](https://www.npmjs.com/package/@crestron/ch5-crcomlib), Apache License
+  2.0. The table of which join kind each HTML5 panel component setting carries is generated from its
+  component metadata. No other code from it is included; see `THIRD_PARTY_NOTICES.md`.
 - **CresnetMon, by DosMan.** DosMan wrote CresnetMon, a Windows Forms monitor for the Cresnet
   RS-485 bus, and published it on CodePlex in April 2015 under the Microsoft Public License
   (Ms-PL). Stephen Genusa later mirrored it to GitHub as

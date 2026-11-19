@@ -94,8 +94,9 @@ Do this before turning writes on.
 1. Ask what the program controls besides lights. Alarm keypads, gates, garage doors, door locks,
    pool equipment, anything you would not want triggered by mistake.
 2. Find the panel pages for those things. A TSW x52 panel's project file lists every page and
-   every button's joins; `crestron-controller panel parse --format csv` gives you a table. See
-   [panel project files](../inventory/panel-project-files.md).
+   every button's joins; `crestron-controller panel parse --format csv` gives you a table. It reads
+   an x60 or x70 `.ch5z` too, but that is experimental and untested on real hardware, so do not
+   treat its list as complete. See [panel project files](../inventory/panel-project-files.md).
 3. List every join on those pages, including the home-page button that enters that section. Use
    ranges generously. A join you list but never needed costs nothing.
 4. Check for loads that share the range. If a light's only button is inside the forbidden range,

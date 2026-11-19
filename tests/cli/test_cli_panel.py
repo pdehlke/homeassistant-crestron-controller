@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import csv
 import socket
 
 import pytest
@@ -165,7 +166,9 @@ def test_inventory_csv(project):
     lines = panel.inventory_csv(project).splitlines()
     assert lines[0].split(",") == list(panel.CSV_FIELDS)
     assert any("Kitchen Pendants,301,301" in line for line in lines)
-    assert any(line.endswith("d+100") for line in lines)
+    rows = list(csv.DictReader(lines))
+    assert any(row["offsets_applied"] == "d+100" for row in rows)
+    assert all(row["smart_object"] == "" for row in rows)  # x52 projects have none
 
 
 def test_draft_passes_join_map_validation_and_writes_nothing(project):
@@ -251,7 +254,7 @@ def test_parse_command_csv_to_stdout(capsys):
 
 def test_parse_command_refuses_unsupported(tmp_path, capsys):
     bad = tmp_path / "project.ch5z"
-    bad.write_bytes(b"PK\x03\x04whatever")
+    bad.write_bytes(b"PK\x03\x04whatever")  # a zip signature on a damaged file
     args = parse_args("parse", str(bad))
     assert args.func(args) == 2
     assert panel.FORMATS_DOC in capsys.readouterr().err

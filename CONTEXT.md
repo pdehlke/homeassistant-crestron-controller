@@ -14,6 +14,15 @@ system. It owns the joins. Home Assistant connects to the processor, never to a 
 **Touch panel**: a Crestron screen (TSW, TPMC and similar) that talks to a processor over the
 network. This project impersonates one.
 
+**Panel project**: what a touch panel draws, with every control's joins. An x52 panel keeps it as
+`Environment.xml` (VT Pro-e, fetched over the CTP console). An x60/x70 panel runs an **HTML5
+project** (CH5), a `.ch5z` archive of web pages, hand-written or made with Crestron Construct, that
+the user must get from their programmer. Reading `.ch5z` is experimental and untested on real
+hardware ([ADR 0014](./docs/adr/0014-reading-html5-panel-projects.md)).
+
+**Contract**: Crestron Contract Editor's `config/contract.cse2j` inside an HTML5 project, mapping
+signal names to joins. Every contract signal is a join inside a SmartObject.
+
 **Control point**: everywhere a person can control the system: touch panels, keypads, remotes.
 Used in the docs only when explaining where to look for which processor a control point talks
 to.
@@ -61,6 +70,7 @@ pages. Written `also_reports` in a join map.
 joins are a namespace of their own: object 3's serial 11 is not the program's serial 11. Keyed by
 `(kind, join, smart object)` with object 0 for the program's own joins, with separate allow and
 never-write lists per object. Read by sensors and binary sensors, pressed by buttons and selects.
+An HTML5 project built with a contract puts every named signal in a SmartObject, lists or not.
 Not verified on real hardware
 ([ADR 0012](./docs/adr/0012-smartobject-joins-are-their-own-namespace.md),
 [ADR 0013](./docs/adr/0013-writing-to-smartobjects.md)).

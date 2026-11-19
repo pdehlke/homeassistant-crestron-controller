@@ -6,6 +6,11 @@ one. It is the panel's project file. Reading it is the safest way to start an in
 names joins without pressing anything. This page walks you through finding that file in your own
 house, step by step, from not knowing which box is which to having the file on your computer.
 
+How you get the file depends on the panel family. TSW x52 panels hand it over through their own
+console, and most of this page is about that. TSW x60 and x70 panels run a different kind of
+project, a `.ch5z` file that you get from whoever programmed your system; reading one is
+experimental and untested on real hardware. Step 2 tells you which family you have.
+
 [Panel project files](./panel-project-files.md) is the reference for the two commands that fetch
 and read the file. This page is the part before that: working out which panel to ask, whether it
 has a file the tool can read, and where on the panel that file lives.
@@ -20,8 +25,8 @@ such as `10.0.0.31` are examples; use your own.
 A [touch panel](../concepts/glossary.md#touch-panel) does not decide what its buttons do. The
 [control processor's](../concepts/glossary.md#control-processor) program does that. But the panel
 has to know what to draw, so the installer loaded a project onto it: every page, every button,
-every label and every join number. The installer designed that project in Crestron's VT Pro-e
-software and compiled it for the panel.
+every label and every join number. For an x52 panel, the installer designed that project in
+Crestron's VT Pro-e software and compiled it for the panel.
 
 On the TSW x52 family of panels (the TSW-552, TSW-752, TSW-1052 and related models), the compiled
 project is stored on the panel as an XML file called `Environment.xml`. That is the file you want.
@@ -63,9 +68,11 @@ model, carry on. If it names a processor (for example a CP3, an MC3 or an MC2E, 
 product with a processor built in), you have the wrong box; try the next address. You can also turn
 the panel around: the model is printed on a label on the back.
 
-If the panel names a newer family, such as an x60 or x70 model, stop here. Those panels run HTML5
-projects packed in a different format, which the parser does not read yet. See
-[formats that are not supported](./panel-project-files.md#formats-that-are-not-supported).
+If the panel names a newer family, such as an x60 or x70 model, the rest of this page does not
+apply. Those panels run HTML5 projects packed as a `.ch5z` file, and there is no tested way to
+download one from the panel. Ask whoever programmed your system for a copy of the `.ch5z`, then
+skip to [if you have a .ch5z file](#if-you-have-a-ch5z-file). Reading one is experimental and
+untested on real hardware.
 
 If nothing answers on port 41795, try port 23 with the same command and no `--port`. A panel that
 answers on 23 but not 41795 will not be able to send its file, because the transfer only works on
@@ -151,11 +158,26 @@ appears as"](./panel-project-files.md#also-appears-as-and-why-it-matters-for-saf
 promote anything in the draft to something Home Assistant can switch. That section is how you spot
 a join the program shares with an alarm keypad.
 
+## If you have a .ch5z file
+
+An x60 or x70 panel's project needs no fetching once you have the file. Read it on your computer:
+
+```sh
+crestron-controller panel parse MyProject.ch5z -o draft.yaml
+```
+
+This reader is **experimental and untested on real hardware**. It was built from Crestron's
+developer packages and public sample projects, never from a project taken from a real house, so
+check every join it gives you with [`watch`](./watching-keypads.md) before you rely on it. How it
+works and what it cannot read are in
+[x60 and x70 panels](./panel-project-files.md#x60-and-x70-panels-html5-projects).
+
 ## When the panel cannot give you a file
 
 | What happened | What to do |
 | --- | --- |
-| The panel is an x60, x70 or other newer model | The parser cannot read its project yet. Use [`listen`](./listening-to-a-processor.md) and [`watch`](./watching-keypads.md) instead. |
+| The panel is an x60 or x70 model | Ask your programmer for its `.ch5z` file, then see [if you have a .ch5z file](#if-you-have-a-ch5z-file). If you cannot get one, or the reader refuses it, use [`listen`](./listening-to-a-processor.md) and [`watch`](./watching-keypads.md) instead. |
+| The panel is an older model than x52 | The parser cannot read its project. Use `listen` and `watch` instead. |
 | `VER` answers but `PROJECTINFO` or `DIR` is refused | The firmware may name these differently or block them. Try the same command on port 23 to compare, then fall back to `listen` and `watch`. |
 | The console asks for a login | Pass `--username`, as described in [the processor console](./processor-console.md#logging-in). That path has not been tested against a real panel. |
 | The fetch stops partway | Nothing is written. Run it again. See [when it fails](./panel-project-files.md#when-it-fails). |

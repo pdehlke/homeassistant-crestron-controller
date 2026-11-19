@@ -16,6 +16,11 @@ rellis-erigon's Crestron-CIP-HA. All three are credited in full in
 > processor has been seen to accept. See
 > [reading and choosing from lists](./docs/configuration/reading-lists.md).
 
+> **Reading x60 and x70 touch panel projects (`.ch5z`) is experimental and untested on real
+> hardware.** It was built from Crestron's developer packages and public sample projects, never
+> from a project taken from a real house. See
+> [panel project files](./docs/inventory/panel-project-files.md#x60-and-x70-panels-html5-projects).
+
 This file is a table of contents. New users should start with
 [what you need](./docs/getting-started/what-you-need.md) and read the getting-started section in
 order.
@@ -58,7 +63,8 @@ order.
 - [Finding your touch panel's project file](./docs/inventory/finding-your-panel-project.md): a
   step-by-step walk from a router list to the project file on your own panel, for first-timers.
 - [Panel project files](./docs/inventory/panel-project-files.md): fetching and parsing a TSW x52
-  panel's project to get every button's label and join.
+  panel's project to get every button's label and join, and reading an x60 or x70 panel's `.ch5z`
+  project (experimental, untested on real hardware).
 
 ## Configuration
 
@@ -150,6 +156,14 @@ order.
 - [0011: CIP over TLS with a pinned
   certificate](./docs/adr/0011-cip-over-tls-with-a-pinned-certificate.md): encrypted CIP, and why
   the certificate is pinned rather than unchecked. Supersedes 0008 for TLS.
+- [0012: SmartObject joins are their own
+  namespace](./docs/adr/0012-smartobject-joins-are-their-own-namespace.md): why a list's joins are
+  keyed by object as well as number.
+- [0013: Writing to SmartObjects](./docs/adr/0013-writing-to-smartobjects.md): pressing list items,
+  the select entity, and per-object write lists.
+- [0014: Reading HTML5 panel projects](./docs/adr/0014-reading-html5-panel-projects.md): how x60
+  and x70 `.ch5z` projects are read, what that was learned from, and what is left unresolved on
+  purpose.
 
 ## Project
 

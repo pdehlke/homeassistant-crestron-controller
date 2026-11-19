@@ -25,6 +25,28 @@ and does not need its source.
 A Crestron screen (TSW, TPMC and similar) that connects to a processor over the network and shows
 pages the installer designed. Crestron Controller impersonates one.
 
+### Panel project
+
+Everything a touch panel needs to draw its screens: every page, every button and its label, and
+the joins each button sends and shows. Reading it is the safest way to learn a system's joins. On
+a TSW x52 panel it is a file called `Environment.xml`, kept on the panel. On a TSW x60 or x70 panel
+it is an [HTML5 project](#html5-project). See [panel project
+files](../inventory/panel-project-files.md).
+
+### HTML5 project
+
+The kind of [panel project](#panel-project) that TSW x60 and x70 panels run: a set of web pages,
+written by hand or made with Crestron's Construct design tool, packed into one `.ch5z` file
+(Crestron also calls this CH5). You get the file from whoever programmed your system. Crestron
+Controller can read one, but that support is experimental and untested on real hardware.
+
+### Contract
+
+A file inside some [HTML5 projects](#html5-project), made with Crestron's Contract Editor, that
+lets a designer call signals by name ("Room.Power.Press") instead of by join number. It turns each
+name into a join number inside a [SmartObject](#smartobject), which is how Crestron Controller
+finds the joins behind the names.
+
 ### XPanel
 
 A software touch panel that runs on a computer, with its own IP-ID in the program. An unused XPanel
@@ -115,6 +137,9 @@ sends a list's contents in a separate format from ordinary buttons and sliders, 
 list's joins in the list's own range, so a list's text 11 is a different signal from the rest of
 the system's text 11. That is why a join map entry that reads from a list says which list, with
 `smart_object:`.
+
+Projects for newer panels that use a [contract](#contract) put every named signal in a
+SmartObject, not only lists, so a draft made from one has many `smart_object:` lines.
 
 Crestron Controller can read lists and, with writes turned on, choose from them, but has not been
 tested against a real processor that uses them, so nobody has confirmed either works yet. If your

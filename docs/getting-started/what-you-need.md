@@ -32,10 +32,30 @@ processors](../configuration/multiple-processors.md).
 
 | Optional | What it gives you |
 | --- | --- |
-| The `crestron-controller` command-line tool, installed with `uv` on a computer with Python 3.14 | Lists the IP-IDs a processor defines (`crestron-controller ipids`), shows join changes live while you press keypads (`crestron-controller watch`), records a full join inventory (`crestron-controller listen`), reads a TSW x52 panel's project file (`crestron-controller panel`), and validates a join map (`crestron-controller check`). See [installing](./installing.md). |
+| The `crestron-controller` command-line tool, installed with `uv` on a computer with Python 3.14 | Lists the IP-IDs a processor defines (`crestron-controller ipids`), shows join changes live while you press keypads (`crestron-controller watch`), records a full join inventory (`crestron-controller listen`), reads a touch panel's project file (`crestron-controller panel`; see the note below), and validates a join map (`crestron-controller check`). See [installing](./installing.md). |
 | Access to the processor's text console (telnet on port 23, or the CTP console on port 41795) | Lets you identify the processor model and read its IP table, which is the most direct way to find a free IP-ID. On the system this was developed on, both consoles answered with no password. Console login is implemented in the CLI but has not been tested against a processor that asks for one. |
 | A touch panel you can take offline | If no spare slot exists, unplugging a panel frees its IP-ID. Its project file is also the safest source of join numbers. |
+| Your touch panel's project file | The safest way to learn join numbers and their labels without pressing anything. Which panels this works for is in the note below. |
 | A DHCP reservation for the processor | Not strictly required, but strongly advised. A processor that changes address overnight takes every entity on that link with it. See [the DHCP post-mortem](../case-study/post-mortem-dhcp-address-change.md). |
+
+### Touch panel project files: x52 versus x60 and x70
+
+Reading a panel's project file is optional, but it is the quickest way to inventory your
+system's joins, with the names the panel shows for each one. How well it works depends on the
+panel family:
+
+- **TSW x52 panels** (TSW-552, TSW-752, TSW-1052 and related models) keep their project on the
+  panel as `Environment.xml`. `crestron-controller panel fetch` downloads it and `panel parse`
+  reads it. This has been tested on a real TSW-752 project.
+- **TSW x60 and x70 panels** (TSW-760, TSW-770, TSW-1070 and related models) run HTML5 projects
+  packed as a `.ch5z` file. `panel parse` can read one, but **this support is experimental and
+  untested on real hardware**: it was built from Crestron's developer packages and public sample
+  projects, never from a project taken from a real house. There is also no tested way to download
+  the file from the panel; you need a copy from whoever programmed your system.
+- Older panels, and x60/x70 projects whose joins are set in program code, cannot be read. The
+  inventory still works without a project file, from what the processor sends.
+
+See [panel project files](../inventory/panel-project-files.md) for the details.
 
 ## What it will not do
 
