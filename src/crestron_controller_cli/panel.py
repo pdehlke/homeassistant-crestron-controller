@@ -571,7 +571,27 @@ def _slug(text: str) -> str:
 def _q(text: str) -> str:
     # A JSON string is also a valid YAML double-quoted scalar, which is the
     # simplest way to quote arbitrary label text correctly.
-    return json.dumps(text, ensure_ascii=False)
+    # JSON leaves these three raw, and YAML reads them as line breaks.
+    quoted = json.dumps(text, ensure_ascii=False)
+    return quoted.replace("\x85", "\\x85").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+
+
+# Characters a terminal or a YAML parser may act on: C0 and C1 controls, and
+# the Unicode line and paragraph separators. YAML treats \x85, U+2028 and
+# U+2029 as line breaks, so one inside a comment would turn the rest of the
+# line into YAML. Project files are untrusted, and a crafted label could
+# otherwise add a writable entry to a draft that must stay read-only.
+_UNSAFE = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]")
+
+
+def _clean(text: str) -> str:
+    return _UNSAFE.sub(" ", text)
+
+
+def _finish(lines: list[str]) -> str:
+    """Join draft lines, cleaning every comment line of characters that could end it early."""
+    out = [_clean(line) if line.lstrip().startswith("#") else line for line in lines]
+    return "\n".join(out) + "\n"
 
 
 @dataclass
@@ -758,7 +778,7 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
     candidates = _candidates(project)
     if not candidates:
         lines.append("entities: []")
-        return "\n".join(lines) + "\n"
+        return _finish(lines)
 
     # Names repeat ("Off" on every room page), so a repeated label gets its
     # page appended, and the id gets the join, which is always unique per kind.
@@ -810,7 +830,7 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
             ]
         if cand.smart_object:
             lines.append(f"    smart_object: {cand.smart_object}")
-    return "\n".join(lines) + "\n"
+    return _finish(lines)
 
 
 _UNRESOLVED_SHOWN = 20
@@ -840,7 +860,7 @@ def summary(project: Project) -> str:
         out.append(
             f"HTML5 project support is experimental and untested on real panels. See {FORMATS_DOC}."
         )
-    return "\n".join(out)
+    return "\n".join(_clean(line) for line in out)
 
 
 # ---- commands --------------------------------------------------------------

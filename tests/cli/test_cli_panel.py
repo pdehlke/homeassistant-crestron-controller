@@ -306,3 +306,22 @@ def test_fetch_reports_a_refusal_and_writes_nothing(fake_server, tmp_path, capsy
     assert args.func(args) == 1
     assert not out.exists()
     assert "Not Found" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("brk", ["\x85", " ", " ", "\r", "\n"])
+def test_a_crafted_label_cannot_add_entries_to_the_draft(brk):
+    # YAML reads \x85, U+2028 and U+2029 as line breaks; a label carrying one
+    # must not end a comment early and smuggle in a writable entity.
+    evil = f"Lamp{brk}  - type: switch{brk}    name: Gate{brk}    feedback: 9{brk}    press: toggle"
+    controls = [
+        Control("Home", "Home", "Simple_Button", "B1", evil, press=11),
+        Control("Other", "Other", "Simple_Button", "B2", "Lamp", press=11),
+        Control("Home", "Home", "Simple_Button", "B3", "Hall", press=12),
+    ]
+    project = Project("TSW-752", "Home", ["Home", "Other"], controls, unresolved=[evil])
+    text = panel.draft_join_map(project)
+    jm = joinmap.parse(yaml.safe_load(text))
+    assert {e.type for e in jm.entities} == {"binary_sensor"}
+    assert all(not e.writes() for e in jm.entities)
+    assert len(jm.entities) == 2
+    assert all(c not in panel.summary(project) for c in ("\x85", " ", " "))
