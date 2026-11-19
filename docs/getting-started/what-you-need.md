@@ -39,10 +39,11 @@ processors](../configuration/multiple-processors.md).
 
 ## What it will not do
 
-Version 1 has no `select` or `media_player` entities, does not support authenticated CIP, has not
-tested encrypted CIP against a real processor, and has never seen a processor accept the analog or
-serial write encodings it uses. Audio
-zones driven through a cursor are documented as a [pattern](../patterns/cursor-zone-audio.md), not
-built. The full list is in [unsupported systems](../troubleshooting/unsupported-systems.md).
+Version 1 has no `media_player` entities, does not support authenticated CIP, has not tested
+encrypted CIP against a real processor, and has never seen a processor accept the analog or serial
+write encodings it uses. Its `select` entity, for choosing from a list on a panel, has not been
+tested on a real processor either; see
+[reading and choosing from lists](../configuration/reading-lists.md). Audio zones driven through a
+cursor are documented as a [pattern](../patterns/cursor-zone-audio.md), not built. The full list is in [unsupported systems](../troubleshooting/unsupported-systems.md).
 
 Next: [how it works](./how-it-works.md).

@@ -62,7 +62,8 @@ what a result means.
 All in `docs/`; point the user at the one that fits.
 
 - `docs/inventory/`: `inventory-overview.md` (start here), `processor-console.md`,
-  `listening-to-a-processor.md`, `watching-keypads.md`, `panel-project-files.md`.
+  `listening-to-a-processor.md`, `watching-keypads.md`, `finding-your-panel-project.md` (a
+  first-timer's walk to a panel's project file), `panel-project-files.md`.
 - `docs/configuration/join-map-reference.md`: every join map key. The schema itself is
   `custom_components/crestron_controller/cipcore/joinmap.py`.
 - `docs/configuration/write-safety.md`, `subsystem-gating.md`, `press-modes.md`,
