@@ -55,6 +55,8 @@ order.
   listen`, entering a gated subsystem with `--enter`, and measuring `quiet_seconds`.
 - [Watching keypads](./docs/inventory/watching-keypads.md): `crestron-controller watch`, naming
   joins as you press buttons on the wall.
+- [Finding your touch panel's project file](./docs/inventory/finding-your-panel-project.md): a
+  step-by-step walk from a router list to the project file on your own panel, for first-timers.
 - [Panel project files](./docs/inventory/panel-project-files.md): fetching and parsing a TSW x52
   panel's project to get every button's label and join.
 

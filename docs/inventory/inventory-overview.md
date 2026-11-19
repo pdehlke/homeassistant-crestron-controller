@@ -33,8 +33,9 @@ The `crestron-controller` command-line tool does most of the work. Install it as
    See [listening to a processor](./listening-to-a-processor.md).
 5. **Read the panel project, if you have a TSW x52 panel.** `crestron-controller panel fetch`
    downloads the panel's compiled project and `crestron-controller panel parse` turns it into a
-   draft with real names, and flags the buttons that may enter a gated subsystem. See [panel project
-   files](./panel-project-files.md).
+   draft with real names, and flags the buttons that may enter a gated subsystem. See [finding your
+   touch panel's project file](./finding-your-panel-project.md) for a first walk-through, and
+   [panel project files](./panel-project-files.md) for the reference.
 6. **Watch while pressing keypads.** `crestron-controller watch HOST --ipid ID` prints joins as they
    change, so you can switch a light at the wall and see which join tracks it. See [watching
    keypads](./watching-keypads.md).

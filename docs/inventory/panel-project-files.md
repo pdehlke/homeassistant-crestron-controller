@@ -8,7 +8,9 @@ Reading it is the safe way to learn a system's joins, because it names them with
 anything.
 
 `crestron-controller panel fetch` downloads the file from the panel, and `crestron-controller panel
-parse` turns it into an inventory and a draft [join map](../concepts/glossary.md#join-map).
+parse` turns it into an inventory and a draft [join map](../concepts/glossary.md#join-map). If you
+have not yet found which panel to fetch from, or where its file is, start with
+[finding your touch panel's project file](./finding-your-panel-project.md).
 
 ## What a panel project is
 
