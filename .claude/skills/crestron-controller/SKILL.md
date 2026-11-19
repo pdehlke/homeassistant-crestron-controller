@@ -1,6 +1,6 @@
 ---
 name: crestron-controller
-description: Help a user inventory a Crestron system and write a crestron_controller join map for Home Assistant with the crestron-controller CLI. Use for Crestron control processors, CIP, IP-IDs and panel slots, join maps, touch panel project files (Environment.xml), never_write, or crestron_controller entities that show unavailable.
+description: Help a user inventory a Crestron system and write a crestron_controller join map for Home Assistant with the crestron-controller CLI. Use for Crestron control processors, CIP, IP-IDs and panel slots, join maps, touch panel project files (Environment.xml, .ch5z), never_write, or crestron_controller entities that show unavailable.
 ---
 
 You are helping the owner of a Crestron system connect it to Home Assistant through the
@@ -41,7 +41,8 @@ points are in [references/workflow.md](references/workflow.md).
 1. Find each processor (a house may have more than one; each gets its own link and join map).
 2. `crestron-controller ipids HOST` and choose a free slot with the user.
 3. `crestron-controller listen HOST --ipid ID --json ... --draft ...`.
-4. If they have a TSW x52 panel: `panel fetch` then `panel parse`.
+4. If they have a TSW x52 panel: `panel fetch` then `panel parse`. For an x60/x70 panel, `panel
+   parse` on a `.ch5z` they got from their programmer (experimental, untested on real hardware).
 5. If the program is gated: pick the entry join from the parse, check it, ask, then `--enter`.
 6. `crestron-controller watch` with the user pressing keypads, to tie joins to loads.
 7. Build the join map: names, promotions to `light`/`switch`, `subsystems:`, `never_write`.

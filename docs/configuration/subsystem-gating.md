@@ -35,9 +35,11 @@ held the Lights and Audio buttons also held the button that entered the alarm ke
 
 The safe source is the touch panel's own project file. For a TSW x52 panel, `crestron-controller
 panel fetch` downloads it and `crestron-controller panel parse` lists the home page's buttons as
-likely entry joins. See [panel project files](../inventory/panel-project-files.md). Put the entry
-join of any section you never want Home Assistant in, such as an alarm or security section, on
-`never_write.digital`: the gated example does exactly that.
+likely entry joins. For an x60 or x70 panel, `panel parse` reads the `.ch5z` file from whoever
+programmed the system; that is experimental and untested on real hardware. See
+[panel project files](../inventory/panel-project-files.md). Put the entry join of any section you
+never want Home Assistant in, such as an alarm or security section, on `never_write.digital`: the
+gated example does exactly that.
 
 ## Measuring quiet_seconds
 

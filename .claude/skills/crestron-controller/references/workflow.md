@@ -44,7 +44,7 @@ Presses nothing. Pre-flight failures exit 2 with a hint (wrong address, IP-ID no
 refused). If the result is a small menu (see reading-outputs.md), the program is gated: go to
 step 5 after step 4.
 
-## 4. Panel project (TSW x52 only)
+## 4. Panel project (TSW x52; x60/x70 experimental)
 
 ```sh
 crestron-controller panel fetch PANEL_ADDR -o Environment.xml     # 10-15 minutes on a TSW-752
@@ -53,8 +53,21 @@ crestron-controller panel parse Environment.xml --format csv -o inventory.csv
 ```
 
 Tell the user the fetch is slow before starting it (one real 3.5 MB fetch took about 705 s); run it
-in the background if you can. x60/x70 (`.ch5z`) and `.vtz` files are refused; there is no
-workaround in this project.
+in the background if you can.
+
+x60/x70 panels: `panel fetch` does not work for them (untried), so the user needs the `.ch5z` from
+whoever programmed the system. Then:
+
+```sh
+crestron-controller panel parse MyProject.ch5z -o panel-draft.yaml
+crestron-controller panel parse MyProject.ch5z --format csv -o inventory.csv
+```
+
+Tell the user this reader is experimental and untested on real hardware (built from Crestron's npm
+packages and public sample projects), and confirm any join it gives with `watch` before relying on
+it. Contract names become entries with `smart_object:`, which is itself untested on real hardware.
+Projects whose joins are set in JavaScript (React/Vue builds), `.vtz` files and other zips are
+refused; fall back to `listen` and `watch`.
 
 From the parse, collect:
 

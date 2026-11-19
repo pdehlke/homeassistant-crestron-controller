@@ -90,10 +90,11 @@ The panel reads its flash slowly and keeps working normally while it does. `cres
 panel fetch` warns that a TSW-752 takes roughly 10 to 15 minutes.
 
 The panel project is UTF-16 XML that names every page, button and join number in the clear. The same
-project was found on all four panels in that house, so one fetch covered them all. Only the TSW x52
-format is understood by `crestron-controller panel parse`; newer panels pack HTML5 projects in
-archives, which are detected and refused. See
-[panel-project-files.md](../inventory/panel-project-files.md).
+project was found on all four panels in that house, so one fetch covered them all. `panel fetch`
+is written for this x52 file only. Newer panels (x60, x70) run HTML5 projects packed as `.ch5z`
+archives; `panel parse` reads those experimentally, untested on real hardware, from a copy the user
+supplies. Whether such a panel answers `XGETFILE` for its project has not been tried. See
+[panel-project-files.md](../inventory/panel-project-files.md#x60-and-x70-panels-html5-projects).
 
 ## Why bother
 

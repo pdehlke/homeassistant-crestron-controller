@@ -33,7 +33,8 @@ which one it is in decides what a press means.
 - The panel's home page is a menu. If the touch panel's first page is a row of buttons such as
   Lights, Audio and Climate, and nothing else, those may be entry joins. A TSW x52 panel's project
   file names its home page and its buttons; `crestron-controller panel parse` lists likely entry
-  joins. See [panel project files](../inventory/panel-project-files.md).
+  joins. It can also read an x60 or x70 panel's `.ch5z` file, experimentally and untested on real
+  hardware. See [panel project files](../inventory/panel-project-files.md).
 - Pressing the entry join changes everything. `crestron-controller listen --enter JOIN
   --allow-press` presses that one join and reports what arrived. On a gated program a burst of joins
   arrives after the press. Only do this with a join you have identified from the project file, never

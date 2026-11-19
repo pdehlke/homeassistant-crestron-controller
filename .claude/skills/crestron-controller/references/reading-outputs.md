@@ -91,8 +91,16 @@ Per entry comments:
   non-zero case. Confirm with `watch` before use.
 
 Summary (with `-o`): panel type, home page, controls with joins per page. One real TSW-752
-project gave about 260 entities. Exit 2 means an unsupported format (zip archive for x60/x70
-`.ch5z` or `.vtz`, HTML, non-project XML); exit 1 means the file could not be read.
+project gave about 260 entities. Exit 2 means an unsupported format (`.vtz` or another zip that is
+not a `.ch5z`, a `.ch5z` whose joins are set in JavaScript, loose HTML, non-project XML); exit 1
+means the file could not be read.
+
+For a `.ch5z` (x60/x70, experimental and untested on real hardware), the draft opens with a comment
+block saying so, and both the summary and the draft list names that could not be resolved to a join
+number, with where and why (for example a name missing from the contract, or a list template such
+as `1{{idx}}` with no contract). Entries resolved through the contract carry `smart_object:`.
+Contract signals no button names appear under page `(contract only)`. The CSV's last column,
+`smart_object`, is empty for x52 projects.
 
 ## `panel fetch`
 

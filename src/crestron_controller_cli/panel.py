@@ -8,9 +8,10 @@ it is the safe way to build a join map; the alternative, pressing joins to see
 what they do, risks arming an alarm or opening a gate on a program that reuses
 join numbers across subsystems.
 
-Only the x52 Environment.xml format is understood. Newer panels (x60, x70) run
-HTML5 projects packed as .ch5z archives, and older panels use other formats;
-both are detected and refused with a pointer to
+Two formats are understood: the x52 Environment.xml, described below, and the
+HTML5 .ch5z archives that x60 and x70 panels run, read by ch5.py. Support for
+.ch5z is experimental and untested against a real panel. Older panels use other
+formats, which are detected and refused with a pointer to
 docs/inventory/panel-project-files.md.
 
 What the parser relies on, learned from real x52 project files:
@@ -68,7 +69,7 @@ JOIN_MAP_DOC = "docs/configuration/join-map-reference.md"
 
 
 class UnsupportedFormat(Exception):
-    """The file is not an x52 Environment.xml. The message says what it looks like."""
+    """The file is not a panel project this tool can read. The message says what it looks like."""
 
 
 # ---- decoding --------------------------------------------------------------
@@ -83,10 +84,8 @@ def decode_project(raw: bytes) -> str:
     head = raw[:4]
     if head.startswith(b"PK\x03\x04"):
         raise UnsupportedFormat(
-            "this is a zip archive, not an x52 Environment.xml. x60 and x70 panels "
-            "use HTML5 projects packed as .ch5z archives, and VT Pro-e source "
-            "projects (.vtz) are archives too; neither is supported. See "
-            f"{FORMATS_DOC}."
+            "this is a zip archive, not an x52 Environment.xml. If it is an x60 or x70 "
+            f".ch5z project, read it with load_project(). See {FORMATS_DOC}."
         )
     if head.startswith(codecs.BOM_UTF8):
         text = raw[3:].decode("utf-8", errors="replace")
@@ -111,8 +110,8 @@ def decode_project(raw: bytes) -> str:
     lowered = stripped[:200].lower()
     if lowered.startswith(("<!doctype html", "<html")):
         raise UnsupportedFormat(
-            f"this is an HTML page, not an x52 Environment.xml. HTML5 panel projects "
-            f"(x60, x70) are not supported. See {FORMATS_DOC}."
+            f"this is an HTML page, not an x52 Environment.xml. For an x60 or x70 panel, "
+            f"pass the whole .ch5z project instead. See {FORMATS_DOC}."
         )
     match = re.match(r"<([A-Za-z_][\w.\-]*)", stripped)
     if not match:
@@ -167,6 +166,9 @@ class Control:
     page_flip: str | None = None
     other: tuple[tuple[str, int], ...] = ()
     offsets: tuple[int, int, int] = (0, 0, 0)
+    # The SmartObject the joins belong to, 0 for the program's own joins. Only
+    # HTML5 projects built with Contract Editor put joins in SmartObjects.
+    smart_object: int = 0
 
     @property
     def offset_note(self) -> str:
@@ -181,6 +183,10 @@ class Project:
     home_page: str | None
     pages: list[str] = field(default_factory=list)
     controls: list[Control] = field(default_factory=list)
+    # Join attributes an HTML5 project names but this tool could not turn into
+    # a number, one human-readable line each. Always empty for an x52 project.
+    unresolved: list[str] = field(default_factory=list)
+    experimental: bool = False
 
 
 _CIPS = re.compile(r"<cips>\s*(\d+)\s*\?([^<]*)</cips>", re.IGNORECASE)
@@ -506,7 +512,12 @@ def parse_project(text: str) -> Project:
 
 
 def load_project(path: Path) -> Project:
-    return parse_project(decode_project(path.read_bytes()))
+    raw = path.read_bytes()
+    if raw.startswith(b"PK\x03\x04"):
+        from . import ch5  # imported here because ch5 imports this module
+
+        return ch5.load_ch5z(raw)
+    return parse_project(decode_project(raw))
 
 
 # ---- outputs ---------------------------------------------------------------
@@ -524,6 +535,7 @@ CSV_FIELDS = (
     "page_flip",
     "other_joins",
     "offsets_applied",
+    "smart_object",
 )
 
 
@@ -546,6 +558,7 @@ def inventory_csv(project: Project) -> str:
                 c.page_flip or "",
                 " ".join(f"{tag}={join}" for tag, join in c.other),
                 c.offset_note,
+                c.smart_object or "",
             )
         )
     return out.getvalue()
@@ -565,6 +578,7 @@ def _q(text: str) -> str:
 class _Candidate:
     kind: str  # DIGITAL, ANALOG or SERIAL
     join: int
+    smart_object: int
     first: Control
     seen: list[Control] = field(default_factory=list)
 
@@ -574,22 +588,25 @@ class _Candidate:
 
 
 def _candidates(project: Project) -> list[_Candidate]:
-    """One candidate per (kind, join), grouped by page.
+    """One candidate per (kind, join, smart object), grouped by page.
 
     One load is routinely on several pages, so the same join on many buttons
     becomes one entity. The entity takes its name from the first labelled
     button that carries the join, because a hardkey or an unlabelled button
     makes a useless name; the other places it appears are kept for the comment.
     """
-    found: dict[tuple[str, int], _Candidate] = {}
+    found: dict[tuple[str, int, int], _Candidate] = {}
     for c in project.controls:
-        for kind, join in ((DIGITAL, c.press), (ANALOG, c.analog), (SERIAL, c.serial)):
+        # In an x52 project feedback is always the press join; an HTML5
+        # project can name a different one, and that is the join to read.
+        joins = [(DIGITAL, c.press), (DIGITAL, c.feedback), (ANALOG, c.analog), (SERIAL, c.serial)]
+        for kind, join in dict.fromkeys(joins):
             if join is None:
                 continue
-            key = (kind, join)
+            key = (kind, join, c.smart_object)
             cand = found.get(key)
             if cand is None:
-                found[key] = _Candidate(kind, join, c)
+                found[key] = _Candidate(kind, join, c.smart_object, c)
             elif _better_name(c, cand.first):
                 cand.seen.append(cand.first)
                 cand.first = c
@@ -636,6 +653,8 @@ def _entry_candidates(project: Project) -> list[Control]:
     for c in project.controls:
         if c.page != project.home_page or c.press is None or c.control == "Hardkey":
             continue
+        if c.smart_object:
+            continue  # a list item; subsystem entries are the program's own joins
         if c.press in seen:
             continue
         seen.add(c.press)
@@ -671,11 +690,33 @@ _HEADER = """\
 """
 
 
+_EXPERIMENTAL = """\
+#
+# EXPERIMENTAL: this came from an HTML5 (.ch5z) project, which this tool has
+# read only from public sample projects, never from a real panel. Check every
+# join with `crestron-controller watch` before relying on it. Entries with
+# `smart_object:` read SmartObject joins, which are also untested on real
+# hardware. See {formats_doc}.
+"""
+
+
 def draft_join_map(project: Project, source: str = "a panel project") -> str:
     """Render the draft join map as commented YAML."""
     lines = _HEADER.format(source=source, join_map_doc=JOIN_MAP_DOC).splitlines()
     if project.panel_type:
         lines.insert(1, f"# Panel type: {project.panel_type}")
+    if project.experimental:
+        lines += _EXPERIMENTAL.format(formats_doc=FORMATS_DOC).splitlines()
+    if project.unresolved:
+        lines += [
+            "#",
+            f"# {len(project.unresolved)} join attributes name a signal this tool could not turn",
+            "# into a join number. They are not in this draft:",
+        ]
+        for line in project.unresolved[:_UNRESOLVED_SHOWN]:
+            lines += _wrap_comment(line, indent="  ")
+        if len(project.unresolved) > _UNRESOLVED_SHOWN:
+            lines.append(f"#   ... and {len(project.unresolved) - _UNRESOLVED_SHOWN} more")
 
     entries = _entry_candidates(project)
     if entries:
@@ -721,9 +762,9 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
 
     # Names repeat ("Off" on every room page), so a repeated label gets its
     # page appended, and the id gets the join, which is always unique per kind.
-    label_keys: dict[str, set[tuple[str, int]]] = {}
+    label_keys: dict[str, set[tuple[str, int, int]]] = {}
     for cand in candidates:
-        label_keys.setdefault(cand.label, set()).add((cand.kind, cand.join))
+        label_keys.setdefault(cand.label, set()).add((cand.kind, cand.join, cand.smart_object))
     used_ids: set[str] = set()
 
     lines.append("entities:")
@@ -733,6 +774,8 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
             current_page = cand.first.page
             lines += ["", f"  # ---- page: {current_page} " + "-" * 20]
         prefix = {DIGITAL: "d", ANALOG: "a", SERIAL: "s"}[cand.kind]
+        if cand.smart_object:
+            prefix = f"o{cand.smart_object}_{prefix}"
         base = cand.label or f"{cand.first.object_name} {prefix}{cand.join}"
         name = base
         if cand.label and len(label_keys[cand.label]) > 1:
@@ -765,7 +808,12 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
                 f"    name: {_q(name)}",
                 f"    {cand.kind}: {cand.join}",
             ]
+        if cand.smart_object:
+            lines.append(f"    smart_object: {cand.smart_object}")
     return "\n".join(lines) + "\n"
+
+
+_UNRESOLVED_SHOWN = 20
 
 
 def _wrap_comment(text: str, indent: str = "") -> list[str]:
@@ -783,6 +831,15 @@ def summary(project: Project) -> str:
         f"{len(project.controls)} controls with joins on {len(pages)} pages:",
     ]
     out += [f"  {count:4d}  {page}" for page, count in pages.items()]
+    if project.unresolved:
+        out.append(f"{len(project.unresolved)} join attributes could not be resolved:")
+        out += [f"  {line}" for line in project.unresolved[:_UNRESOLVED_SHOWN]]
+        if len(project.unresolved) > _UNRESOLVED_SHOWN:
+            out.append(f"  ... and {len(project.unresolved) - _UNRESOLVED_SHOWN} more")
+    if project.experimental:
+        out.append(
+            f"HTML5 project support is experimental and untested on real panels. See {FORMATS_DOC}."
+        )
     return "\n".join(out)
 
 
@@ -864,7 +921,10 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     panel = subparsers.add_parser(
         "panel",
         help="fetch and parse a touch panel's project file",
-        description="Fetch a TSW x52 panel's Environment.xml and turn it into a draft join map.",
+        description=(
+            "Fetch a TSW x52 panel's Environment.xml, or read an x60/x70 .ch5z project "
+            "(experimental), and turn it into a draft join map."
+        ),
     )
     sub = panel.add_subparsers(dest="panel_command", required=True, metavar="ACTION")
 
@@ -888,15 +948,16 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     parse = sub.add_parser(
         "parse",
-        help="inventory an Environment.xml and draft a join map",
+        help="inventory a panel project and draft a join map",
         description=(
-            "Parse an x52 Environment.xml. --format yaml (the default) writes a draft "
-            "join map in which every entry is read-only; --format csv writes an "
-            "inventory of every control with a join. Other panel formats are refused; "
-            f"see {FORMATS_DOC}."
+            "Parse an x52 Environment.xml or an x60/x70 .ch5z project. .ch5z support "
+            "is experimental and untested on real panels. --format yaml (the default) "
+            "writes a draft join map in which every entry is read-only; --format csv "
+            "writes an inventory of every control with a join. Other panel formats are "
+            f"refused; see {FORMATS_DOC}."
         ),
     )
-    parse.add_argument("file", help="the Environment.xml to read")
+    parse.add_argument("file", help="the Environment.xml or .ch5z to read")
     parse.add_argument("-o", "--output", help="write here instead of standard output")
     parse.add_argument("--format", choices=("yaml", "csv"), default="yaml")
     parse.set_defaults(func=run_parse)

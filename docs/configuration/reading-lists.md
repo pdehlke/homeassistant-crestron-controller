@@ -15,7 +15,10 @@ from a list, as if you had tapped it on the wall.
 > processors. If you try it, an issue saying whether it worked would help everyone; see
 > [what to report](#what-to-report).
 
-If your panels have no lists, you can skip this page.
+If your panels have no lists, you can usually skip this page. The exception is an x60 or x70
+panel whose project was built with a contract: its draft puts ordinary buttons and sliders in
+SmartObjects too, so everything here about SmartObjects applies to them. See
+[how much of your draft depends on SmartObjects](../inventory/panel-project-files.md#how-much-of-your-draft-depends-on-smartobjects).
 
 ## What you can and cannot do
 

@@ -92,7 +92,8 @@ are not counted in the lines above. Reading them has not been tested on a real p
 On a program with no gated subsystems, the registration dump carries everything the slot can see.
 Expect many digital joins, with the lights that are on reading high. Go on to
 [watching keypads](./watching-keypads.md) to find which join is which light, and to
-[panel project files](./panel-project-files.md) if you have a TSW x52 panel and want names.
+[panel project files](./panel-project-files.md) if you have a TSW x52 panel and want names (or an
+x60 or x70 `.ch5z` file, which is read experimentally and untested on real hardware).
 
 ## On a gated program
 
@@ -109,7 +110,8 @@ That result does not mean anything is broken. It means you need the subsystem's
 need to press it once. Do it in this order:
 
 1. **Find the entry join without pressing anything.** If you have a TSW x52 panel, fetch and parse
-   its project ([panel project files](./panel-project-files.md)). The draft lists the buttons on
+   its project ([panel project files](./panel-project-files.md)). An x60 or x70 panel's `.ch5z`
+   can be parsed too, experimentally and untested on real hardware. The draft lists the buttons on
    the panel's home page as subsystem-entry candidates, with their labels, such as "Lights" or
    "Audio". Without a panel project, look at what the panel's home page offers and read the
    serial labels in `joins.json`; but do not guess a join number.

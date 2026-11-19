@@ -35,7 +35,9 @@ The `crestron-controller` command-line tool does most of the work. Install it as
    downloads the panel's compiled project and `crestron-controller panel parse` turns it into a
    draft with real names, and flags the buttons that may enter a gated subsystem. See [finding your
    touch panel's project file](./finding-your-panel-project.md) for a first walk-through, and
-   [panel project files](./panel-project-files.md) for the reference.
+   [panel project files](./panel-project-files.md) for the reference. For an x60 or x70 panel,
+   `panel parse` can read the `.ch5z` file your programmer gives you; that is experimental and
+   untested on real hardware, so check what it gives you with `watch`.
 6. **Watch while pressing keypads.** `crestron-controller watch HOST --ipid ID` prints joins as they
    change, so you can switch a light at the wall and see which join tracks it. See [watching
    keypads](./watching-keypads.md).
@@ -73,7 +75,7 @@ the subsystem, so you will only see the menu there.
 | `crestron-controller listen` | A free IP-ID | No | No. Draft names are placeholders such as `Digital 17`. Serial joins often carry labels. | Every join the processor reports to that slot. On a gated program, only the menu. |
 | `crestron-controller listen --enter JOIN --allow-press` | A free IP-ID and the entry join's number, checked first | Yes, that one join, once | No | Every join in that subsystem, and a measured `quiet_seconds` |
 | `crestron-controller watch` | A free IP-ID and someone at a keypad | No (unless given `--enter`) | Yours, if you type them with `--label` | The joins that changed when you pressed something |
-| `crestron-controller panel fetch` and `parse` | A TSW x52 panel on the network, and about 10 to 15 minutes | No | Yes, the labels the panel shows, with page names | Every join the panel project uses, including ones the processor has not reported yet |
+| `crestron-controller panel fetch` and `parse` | A TSW x52 panel on the network, and about 10 to 15 minutes; or, experimentally, an x60 or x70 `.ch5z` file from your programmer (untested on real hardware) | No | Yes, the labels the panel shows, with page names | Every join the panel project uses, including ones the processor has not reported yet |
 | Home Assistant diagnostics | A listen-only entry | No | No | Every join reported to the entry's slot |
 | `crestron-controller check` | A join map file | No. It touches no network. | Not applicable | The allow list and never-write list the map implies |
 

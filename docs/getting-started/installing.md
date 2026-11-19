@@ -94,7 +94,7 @@ Subcommands:
 | `crestron-controller console HOST COMMAND...` | Sends console commands you type, behind a small denylist of destructive ones. You are responsible for what you send. | It can change things. See [the processor console guide](../inventory/processor-console.md). |
 | `crestron-controller listen HOST --ipid ID` | Registers as a panel, records every join reported for a number of seconds, and can write a JSON inventory and a draft join map. | No, unless you add `--enter JOIN --allow-press`. |
 | `crestron-controller watch HOST --ipid ID` | Registers as a panel and prints join changes live while you press keypads. With `--label FILE` it asks you to name each change and appends entries to a join map. | No, unless you add `--enter JOIN --allow-press`. |
-| `crestron-controller panel fetch` / `panel parse` | Downloads a TSW x52 panel's project file over its console and turns it into an inventory or draft join map. | No. |
+| `crestron-controller panel fetch` / `panel parse` | `fetch` downloads a TSW x52 panel's project file over its console; `parse` turns it into an inventory or draft join map. `parse` also reads an x60 or x70 panel's `.ch5z` file, which is experimental and untested on real hardware. See [panel project files](../inventory/panel-project-files.md). | No. |
 | `crestron-controller check FILE` | Validates a join map exactly as the integration will and prints what it would let Home Assistant write. | No. |
 
 There is deliberately no command that presses a range of joins to see what happens; see
