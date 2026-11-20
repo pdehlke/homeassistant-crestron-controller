@@ -13,9 +13,10 @@ import re
 import textwrap
 from dataclasses import dataclass, field
 
-from .project import ANALOG, DIGITAL, FORMATS_DOC, SERIAL, Control, Project
+from .project import ANALOG, DIGITAL, SERIAL, Control, Project
 
 JOIN_MAP_DOC = "docs/configuration/join-map-reference.md"
+_UNRESOLVED_SHOWN = 20
 
 CSV_FIELDS = (
     "page",
@@ -205,33 +206,21 @@ _HEADER = """\
 """
 
 
-_EXPERIMENTAL = """\
-#
-# EXPERIMENTAL: this came from an HTML5 (.ch5z) project, which this tool has
-# read only from public sample projects, never from a real panel. Check every
-# join with `crestron-controller watch` before relying on it. Entries with
-# `smart_object:` read SmartObject joins, which are also untested on real
-# hardware. See {formats_doc}.
-"""
-
-
 def draft_join_map(project: Project, source: str = "a panel project") -> str:
     """Render the draft join map as commented YAML."""
     lines = _HEADER.format(source=source, join_map_doc=JOIN_MAP_DOC).splitlines()
     if project.panel_type:
         lines.insert(1, f"# Panel type: {project.panel_type}")
-    if project.experimental:
-        lines += _EXPERIMENTAL.format(formats_doc=FORMATS_DOC).splitlines()
+    for caveat in project.caveats:
+        lines += ["#", *_wrap_comment(caveat)]
     if project.unresolved:
         lines += [
             "#",
             f"# {len(project.unresolved)} join attributes name a signal this tool could not turn",
             "# into a join number. They are not in this draft:",
         ]
-        for line in project.unresolved[:_UNRESOLVED_SHOWN]:
+        for line in _unresolved_shown(project):
             lines += _wrap_comment(line, indent="  ")
-        if len(project.unresolved) > _UNRESOLVED_SHOWN:
-            lines.append(f"#   ... and {len(project.unresolved) - _UNRESOLVED_SHOWN} more")
 
     entries = _entry_candidates(project)
     if entries:
@@ -328,7 +317,11 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
     return _finish(lines)
 
 
-_UNRESOLVED_SHOWN = 20
+def _unresolved_shown(project: Project) -> list[str]:
+    """The unresolved attributes worth printing, so a broken project cannot bury the output."""
+    shown = project.unresolved[:_UNRESOLVED_SHOWN]
+    rest = len(project.unresolved) - len(shown)
+    return [*shown, f"... and {rest} more"] if rest else shown
 
 
 def _wrap_comment(text: str, indent: str = "") -> list[str]:
@@ -348,11 +341,7 @@ def summary(project: Project) -> str:
     out += [f"  {count:4d}  {page}" for page, count in pages.items()]
     if project.unresolved:
         out.append(f"{len(project.unresolved)} join attributes could not be resolved:")
-        out += [f"  {line}" for line in project.unresolved[:_UNRESOLVED_SHOWN]]
-        if len(project.unresolved) > _UNRESOLVED_SHOWN:
-            out.append(f"  ... and {len(project.unresolved) - _UNRESOLVED_SHOWN} more")
-    if project.experimental:
-        out.append(
-            f"HTML5 project support is experimental and untested on real panels. See {FORMATS_DOC}."
-        )
+        out += [f"  {line}" for line in _unresolved_shown(project)]
+    for caveat in project.caveats:
+        out += textwrap.wrap(caveat, 96, break_long_words=False)
     return "\n".join(_clean(line) for line in out)

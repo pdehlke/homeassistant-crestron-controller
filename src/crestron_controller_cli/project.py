@@ -58,7 +58,9 @@ class Project:
     home_page: str | None
     pages: list[str] = field(default_factory=list)
     controls: list[Control] = field(default_factory=list)
-    # Join attributes an HTML5 project names but this tool could not turn into
-    # a number, one human-readable line each. Always empty for an x52 project.
+    # Join attributes a reader found but could not turn into a number, one
+    # human-readable line each. The x52 reader never produces any.
     unresolved: list[str] = field(default_factory=list)
-    experimental: bool = False
+    # Warnings the reader wants shown with every output, one paragraph each:
+    # the draft carries them as comments and the summary prints them.
+    caveats: list[str] = field(default_factory=list)

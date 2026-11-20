@@ -334,3 +334,17 @@ def test_a_crafted_label_cannot_add_entries_to_the_draft(brk):
     assert all(not e.writes() for e in jm.entities)
     assert len(jm.entities) == 2
     assert all(c not in draft.summary(project) for c in ("\x85", " ", " "))
+
+
+def test_a_long_unresolved_list_is_capped_in_the_draft_and_the_summary():
+    unresolved = [f"page: receivestateshow=sig{i} (not in the contract)" for i in range(25)]
+    project = Project(None, None, unresolved=unresolved)
+    for text in (draft.draft_join_map(project), draft.summary(project)):
+        assert "sig19 " in text and "sig20 " not in text
+        assert "... and 5 more" in text
+
+
+def test_reader_caveats_appear_in_the_draft_and_the_summary():
+    project = Project(None, None, caveats=["CAVEAT: check every join before trusting it."])
+    assert "# CAVEAT: check every join" in draft.draft_join_map(project)
+    assert "CAVEAT: check every join" in draft.summary(project)

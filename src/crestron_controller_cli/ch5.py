@@ -67,6 +67,13 @@ _TEMPLATE_VAR = re.compile(r"\{\{\s*[\w.]+\s*\}\}")
 _JOIN_NUMBER = re.compile(r"[0-9]+")
 _KIND_INDEX = {sig.DIGITAL: 0, sig.ANALOG: 1, sig.SERIAL: 2}
 
+EXPERIMENTAL = (
+    "EXPERIMENTAL: this came from an HTML5 (.ch5z) project, which this tool has read only "
+    "from public sample projects, never from a real panel. Check every join with "
+    "`crestron-controller watch` before relying on it. Entries with `smart_object:` read "
+    f"SmartObject joins, which are also untested on real hardware. See {FORMATS_DOC}."
+)
+
 
 def load_ch5z(raw: bytes) -> Project:
     """Read a .ch5z archive into a Project."""
@@ -341,7 +348,7 @@ class _Reader:
                 + (f"; also on {len(pages) - 1} other pages)" if len(pages) > 1 else ")")
                 for (place, attr, value, reason), pages in self.unresolved.items()
             ],
-            experimental=True,
+            caveats=[EXPERIMENTAL],
         )
 
     def _pages(self) -> tuple[list[tuple[str, str, str]], str | None]:

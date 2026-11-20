@@ -72,7 +72,7 @@ def test_load_project_reads_a_ch5z_by_its_contents(tmp_path):
     path = tmp_path / "anything.bin"
     path.write_bytes(make_ch5z({"index.html": '<ch5-button sendeventonclick="10">'}))
     project = panel.load_project(path)
-    assert project.experimental
+    assert project.caveats == [ch5.EXPERIMENTAL]
     assert [c.press for c in project.controls] == [10]
 
 
@@ -564,7 +564,7 @@ def test_parse_command_on_a_ch5z(tmp_path, capsys):
     args = parse_args("parse", str(CWSDEBUG), "-o", str(out))
     assert args.func(args) == 0
     assert "EXPERIMENTAL" in out.read_text()
-    assert "experimental and untested" in capsys.readouterr().err
+    assert "EXPERIMENTAL" in capsys.readouterr().err
 
 
 def test_csv_carries_the_smart_object(capsys):
