@@ -449,6 +449,22 @@ def test_an_unplaced_widget_is_still_inventoried_and_recursion_stops():
     assert [(c.page, c.press) for c in project.controls] == [("(unplaced) Loop-widget", 9)]
 
 
+def test_a_placed_widget_that_places_itself_is_walked_once():
+    looping = (
+        '<template id="Loop-widget"><ch5-button label="Again" sendeventonclick="9"></ch5-button>'
+        '<ch5-template templateid="Loop-widget"></ch5-template></template>'
+    )
+    place = '<ch5-template templateid="Loop-widget" componentname="Loop"></ch5-template>'
+    project = read({"index.html": place, "widget.html": looping})
+    assert [(c.path, c.press) for c in project.controls] == [("index > Loop", 9)]
+
+
+def test_index_html_comes_first_in_a_hand_written_project():
+    button = '<ch5-button label="B" sendeventonclick="{}"></ch5-button>'
+    project = read({"about.html": button.format(2), "index.html": button.format(1)})
+    assert project.pages == ["index", "about"] and project.home_page == "index"
+
+
 def test_one_unresolved_name_on_many_pages_is_reported_once():
     menu = (
         '<template id="Menu-widget">'

@@ -49,7 +49,7 @@ import zlib
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Any, Literal, NamedTuple
+from typing import Literal, NamedTuple
 
 from . import ch5_signals as sig
 from .project import FORMATS_DOC, Control, Project, UnsupportedFormat
@@ -298,8 +298,15 @@ class _Context:
     prefix: str = ""  # contract name prefix, ending in "."
     widgets: tuple[str, ...] = ()  # widget ids on the way down, to stop recursion
 
-    def into(self, name: str, **changes: Any) -> _Context:
-        return dataclasses.replace(self, trail=(*self.trail, name), **changes)
+    def into(self, name: str, widget: str, offsets: tuple[int, int, int], prefix: str) -> _Context:
+        """The context inside a widget placed here, named `name` in the trail."""
+        return _Context(self.page, (*self.trail, name), offsets, prefix, (*self.widgets, widget))
+
+
+class _Page(NamedTuple):
+    label: str
+    path: str
+    visibility: str  # the page's receiveStateShow signal, or ""
 
 
 class _Reader:
@@ -327,11 +334,11 @@ class _Reader:
 
     def read(self) -> Project:
         pages, home = self._pages()
-        for label, path, visibility in pages:
-            ctx = _Context(label, (label,))
-            if visibility:
-                self._page_join(ctx, visibility)
-            self._walk(self.parsed[path].elements, ctx)
+        for page in pages:
+            ctx = _Context(page.label, (page.label,))
+            if page.visibility:
+                self._page_join(ctx, page.visibility)
+            self._walk(self.parsed[page.path].elements, ctx)
         for template_id, elements in self.templates.items():
             if template_id not in self.placed:
                 name = f"(unplaced) {template_id}"
@@ -340,20 +347,20 @@ class _Reader:
         return Project(
             panel_type=None,
             home_page=home,
-            pages=[label for label, _, _ in pages],
+            pages=[page.label for page in pages],
             controls=self.controls,
             unresolved=[
-                f'{pages[0]}{place}: {attr}="{value}" ({reason}'
-                + (f"; also on {len(pages) - 1} other pages)" if len(pages) > 1 else ")")
-                for (place, attr, value, reason), pages in self.unresolved.items()
+                f'{found_on[0]}{place}: {attr}="{value}" ({reason}'
+                + (f"; also on {len(found_on) - 1} other pages)" if len(found_on) > 1 else ")")
+                for (place, attr, value, reason), found_on in self.unresolved.items()
             ],
             caveats=[EXPERIMENTAL],
         )
 
-    def _pages(self) -> tuple[list[tuple[str, str, str]], str | None]:
-        """(label, file, visibility signal) per page, home page first, and the home page's label."""
+    def _pages(self) -> tuple[list[_Page], str | None]:
+        """Every page, home page first, and the home page's label."""
         content = self.config.get("content") if isinstance(self.config, dict) else None
-        pages: list[tuple[str, str, str]] = []
+        pages: list[_Page] = []
         home: str | None = None
         if isinstance(content, dict) and isinstance(content.get("pages"), list):
             default = content.get("$defaultView")
@@ -370,7 +377,7 @@ class _Reader:
                 visibility = (
                     str(props.get("receiveStateShow", "")) if isinstance(props, dict) else ""
                 )
-                entry = (label, path, visibility)
+                entry = _Page(label, path, visibility)
                 if name == default:
                     home = label
                     pages.insert(0, entry)
@@ -383,9 +390,9 @@ class _Reader:
                 if path in widget_files and not parsed.elements:
                     continue
                 label = path.rsplit(".", 1)[0]
-                pages.append((label, path, ""))
-            pages.sort(key=lambda p: p[1] != "index.html")
-            home = pages[0][0] if pages and pages[0][1] == "index.html" else None
+                pages.append(_Page(label, path, ""))
+            pages.sort(key=lambda p: p.path != "index.html")
+            home = pages[0].label if pages and pages[0].path == "index.html" else None
         return pages, home
 
     def _page_join(self, ctx: _Context, value: str) -> None:
@@ -395,11 +402,11 @@ class _Reader:
         obj, join = found
         self.controls.append(
             Control(
-                ctx.page,
-                ctx.page,
-                "Page",
-                ctx.page,
-                ctx.page,
+                page=ctx.page,
+                path=ctx.page,
+                control="Page",
+                object_name=ctx.page,
+                label=ctx.page,
                 other=(("receivestateshow (page visibility)", join),),
                 smart_object=obj,
             )
@@ -430,9 +437,9 @@ class _Reader:
             elements,
             ctx.into(
                 el.attrs.get("componentname") or template_id,
+                widget=template_id,
                 offsets=offsets,
                 prefix=f"{ctx.prefix}{contract}." if contract else ctx.prefix,
-                widgets=(*ctx.widgets, template_id),
             ),
         )
 
@@ -457,9 +464,9 @@ class _Reader:
                 elements,
                 ctx.into(
                     f"{name} item {index + 1}",
+                    widget=widget_id,
                     offsets=offsets,
                     prefix=prefix,
-                    widgets=(*ctx.widgets, widget_id),
                 ),
             )
 
