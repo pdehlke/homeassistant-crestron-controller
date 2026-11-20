@@ -48,7 +48,7 @@ import zipfile
 import zlib
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, Literal, NamedTuple
 
 from . import ch5_signals as sig
 from .project import FORMATS_DOC, Control, Project, UnsupportedFormat
@@ -464,7 +464,7 @@ class _Reader:
 
     def _element(self, el: _Element, ctx: _Context) -> None:
         object_name = el.attrs.get("componentname") or el.attrs.get("id") or el.tag
-        by_object: dict[int, dict[str, object]] = {}
+        by_object: dict[int, _Joins] = {}
         for attr, value in el.attrs.items():
             if not (el.tag.startswith("ch5-") or attr.startswith("data-ch5-")):
                 continue  # plain HTML elements only act on data-ch5-* attributes
@@ -472,26 +472,22 @@ class _Reader:
             if spec is None or not value.strip():
                 continue
             direction, kind = spec
+            role = _ROLES.get((direction, kind))
+            field_name = role.field if role is not None and attr in role.attrs else None
             for obj, join in self._resolve(value, attr, direction, kind, ctx, object_name):
-                roles = by_object.setdefault(obj, {"other": []})
-                role = _role(attr, direction, kind)
-                if role is not None and role not in roles:
-                    roles[role] = join
-                else:
-                    roles["other"].append((attr, join))  # type: ignore[union-attr]
-        for obj, roles in by_object.items():
-            other = tuple(roles.pop("other"))  # type: ignore[arg-type]
+                by_object.setdefault(obj, _Joins()).add(attr, field_name, join)
+        for obj, joins in by_object.items():
             self.controls.append(
-                Control(
-                    ctx.page,
-                    " > ".join(ctx.trail),
-                    el.tag,
-                    object_name,
-                    _label(el.attrs),
-                    other=other,
-                    offsets=ctx.offsets,
-                    smart_object=obj,
-                    **roles,  # type: ignore[arg-type]
+                joins.fill(
+                    Control(
+                        page=ctx.page,
+                        path=" > ".join(ctx.trail),
+                        control=el.tag,
+                        object_name=object_name,
+                        label=_label(el.attrs),
+                        offsets=ctx.offsets,
+                        smart_object=obj,
+                    )
                 )
             )
 
@@ -541,52 +537,87 @@ class _Reader:
         for s in self.contract.signals:
             if s in self.used:
                 continue
-            role = _role("", s.direction, s.kind)
-            roles = {role: s.join} if role else {}
-            other = () if role else ((f"{s.direction} {s.kind}", s.join),)
+            # No attribute names this signal, so it takes the field its
+            # direction and kind would fill on any attribute.
+            role = _ROLES.get((s.direction, s.kind))
+            joins = _Joins()
+            joins.add(f"{s.direction} {s.kind}", role.field if role else None, s.join)
             group = s.name.rsplit(".", 1)[0] if "." in s.name else page
             self.controls.append(
-                Control(
-                    page,
-                    group,
-                    "contract signal",
-                    s.name,
-                    s.name,
-                    other=other,
-                    smart_object=s.smart_object,
-                    **roles,  # type: ignore[arg-type]
+                joins.fill(
+                    Control(
+                        page=page,
+                        path=group,
+                        control="contract signal",
+                        object_name=s.name,
+                        label=s.name,
+                        smart_object=s.smart_object,
+                    )
                 )
             )
 
 
-def _role(attr: str, direction: str, kind: str) -> str | None:
-    """Which Control field a join fills; None sends it to `other`."""
-    if kind == sig.DIGITAL:
-        if direction == sig.EVENT and attr in (
-            "",
-            "sendeventonclick",
-            "sendeventontouch",
-            "buttonsendeventonclick",
-        ):
-            return "press"
-        if direction == sig.STATE and attr in (
-            "",
-            "receivestateselected",
-            "receivestatevalue",
-            "buttonreceivestateselected",
-        ):
-            return "feedback"
-        return None
-    if kind == sig.ANALOG:
-        return "analog" if attr in ("", "receivestatevalue", "sendeventonchange") else None
-    if direction == sig.STATE and attr in (
-        "",
-        "receivestatelabel",
-        "receivestatescriptlabelhtml",
-        "receivestatevalue",
-        "buttonreceivestatelabel",
-        "data-ch5-textcontent",
-        "data-ch5-innerhtml",
-    ):
-        return "serial"
-    return None
+# ---- roles -----------------------------------------------------------------
+
+Field = Literal["press", "feedback", "analog", "serial"]
+
+
+class _Role(NamedTuple):
+    field: Field
+    attrs: frozenset[str]
+
+
+# Which Control field a join fills, by direction and kind, and the attributes
+# that count as a component's main join of that kind: what a button sends when
+# pressed, the state it shows, a slider's level, a label's text. Any other
+# attribute's join goes to `other`, kept in the inventory with no role guessed.
+_ROLES: dict[tuple[str, str], _Role] = {
+    (sig.EVENT, sig.DIGITAL): _Role(
+        "press",
+        frozenset({"sendeventonclick", "sendeventontouch", "buttonsendeventonclick"}),
+    ),
+    (sig.STATE, sig.DIGITAL): _Role(
+        "feedback",
+        frozenset({"receivestateselected", "receivestatevalue", "buttonreceivestateselected"}),
+    ),
+    (sig.EVENT, sig.ANALOG): _Role("analog", frozenset({"sendeventonchange"})),
+    (sig.STATE, sig.ANALOG): _Role("analog", frozenset({"receivestatevalue"})),
+    (sig.STATE, sig.SERIAL): _Role(
+        "serial",
+        frozenset(
+            {
+                "receivestatelabel",
+                "receivestatescriptlabelhtml",
+                "receivestatevalue",
+                "buttonreceivestatelabel",
+                "data-ch5-textcontent",
+                "data-ch5-innerhtml",
+            }
+        ),
+    ),
+}
+
+
+@dataclass
+class _Joins:
+    """The joins one element carries in one SmartObject, sorted into Control fields."""
+
+    fields: dict[Field, int] = field(default_factory=dict)
+    other: list[tuple[str, int]] = field(default_factory=list)
+
+    def add(self, name: str, field_name: Field | None, join: int) -> None:
+        """The first join for a field fills it; any later one, or one with no field, is other."""
+        if field_name is None or field_name in self.fields:
+            self.other.append((name, join))
+        else:
+            self.fields[field_name] = join
+
+    def fill(self, control: Control) -> Control:
+        return dataclasses.replace(
+            control,
+            press=self.fields.get("press"),
+            feedback=self.fields.get("feedback"),
+            analog=self.fields.get("analog"),
+            serial=self.fields.get("serial"),
+            other=tuple(self.other),
+        )
