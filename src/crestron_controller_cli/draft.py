@@ -102,6 +102,11 @@ class _Candidate:
     def label(self) -> str:
         return self.first.label
 
+    @property
+    def key(self) -> tuple[str, int, int]:
+        """What makes two buttons the same entity: one join, of one kind, in one SmartObject."""
+        return (self.kind, self.join, self.smart_object)
+
 
 def _candidates(project: Project) -> list[_Candidate]:
     """One candidate per (kind, join, smart object), grouped by page.
@@ -119,11 +124,11 @@ def _candidates(project: Project) -> list[_Candidate]:
         for kind, join in dict.fromkeys(joins):
             if join is None:
                 continue
-            key = (kind, join, c.smart_object)
-            cand = found.get(key)
-            if cand is None:
-                found[key] = _Candidate(kind, join, c.smart_object, c)
-            elif _better_name(c, cand.first):
+            new = _Candidate(kind, join, c.smart_object, c)
+            cand = found.setdefault(new.key, new)
+            if cand is new:
+                continue
+            if _better_name(c, cand.first):
                 cand.seen.append(cand.first)
                 cand.first = c
             else:
@@ -268,7 +273,7 @@ def draft_join_map(project: Project, source: str = "a panel project") -> str:
     # page appended, and the id gets the join, which is always unique per kind.
     label_keys: dict[str, set[tuple[str, int, int]]] = {}
     for cand in candidates:
-        label_keys.setdefault(cand.label, set()).add((cand.kind, cand.join, cand.smart_object))
+        label_keys.setdefault(cand.label, set()).add(cand.key)
     used_ids: set[str] = set()
 
     lines.append("entities:")

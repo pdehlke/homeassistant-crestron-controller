@@ -46,6 +46,7 @@ import json
 import re
 import zipfile
 import zlib
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Literal, NamedTuple
@@ -177,30 +178,18 @@ class Contract:
         tree = _json(data, CONTRACT_PATH).get("signals")
         if not isinstance(tree, dict):
             return contract
-        for direction, key in ((sig.STATE, "states"), (sig.EVENT, "events")):
-            section = tree.get(key)
-            if not isinstance(section, dict):
-                continue
-            for ckind, entries in section.items():
-                kind = _CONTRACT_KINDS.get(ckind)
-                if kind is None or not isinstance(entries, dict):
-                    continue
-                for a, b in entries.items():
-                    if direction == sig.STATE and isinstance(b, dict):
-                        # smart object -> {join: name}
-                        for join, name in b.items():
-                            contract.add(Signal(str(name), direction, kind, _num(a), _num(join)))
-                    elif direction == sig.EVENT and isinstance(b, dict):
-                        # name -> {joinId, smartObjectId}
-                        contract.add(
-                            Signal(
-                                a,
-                                direction,
-                                kind,
-                                _num(b.get("smartObjectId")),
-                                _num(b.get("joinId")),
-                            )
-                        )
+        # states: kind -> smart object -> {join: name}
+        for kind, objects in _sections(tree.get("states")):
+            for obj, joins in objects.items():
+                if isinstance(joins, dict):
+                    for join, name in joins.items():
+                        contract.add(Signal(str(name), sig.STATE, kind, _num(obj), _num(join)))
+        # events: kind -> name -> {joinId, smartObjectId}
+        for kind, names in _sections(tree.get("events")):
+            for name, ids in names.items():
+                if isinstance(ids, dict):
+                    obj, join = _num(ids.get("smartObjectId")), _num(ids.get("joinId"))
+                    contract.add(Signal(name, sig.EVENT, kind, obj, join))
         return contract
 
     def add(self, signal: Signal) -> None:
@@ -216,6 +205,16 @@ class Contract:
             if s.direction == direction:
                 return s
         return found[0] if found else None
+
+
+def _sections(section: object) -> Iterator[tuple[str, dict]]:
+    """(join kind, entries) for each signal kind in a contract section that this tool knows."""
+    if not isinstance(section, dict):
+        return
+    for ckind, entries in section.items():
+        kind = _CONTRACT_KINDS.get(ckind)
+        if kind is not None and isinstance(entries, dict):
+            yield kind, entries
 
 
 def _num(value: object) -> int:
@@ -390,19 +389,21 @@ class _Reader:
         return pages, home
 
     def _page_join(self, ctx: _Context, value: str) -> None:
-        joins = self._resolve(value, "receivestateshow", sig.STATE, sig.DIGITAL, ctx, ctx.page)
-        for obj, join in joins:
-            self.controls.append(
-                Control(
-                    ctx.page,
-                    ctx.page,
-                    "Page",
-                    ctx.page,
-                    ctx.page,
-                    other=(("receivestateshow (page visibility)", join),),
-                    smart_object=obj,
-                )
+        found = self._resolve(value, "receivestateshow", sig.STATE, sig.DIGITAL, ctx, ctx.page)
+        if found is None:
+            return
+        obj, join = found
+        self.controls.append(
+            Control(
+                ctx.page,
+                ctx.page,
+                "Page",
+                ctx.page,
+                ctx.page,
+                other=(("receivestateshow (page visibility)", join),),
+                smart_object=obj,
             )
+        )
 
     def _walk(self, elements: list[_Element], ctx: _Context) -> None:
         for el in elements:
@@ -474,7 +475,9 @@ class _Reader:
             direction, kind = spec
             role = _ROLES.get((direction, kind))
             field_name = role.field if role is not None and attr in role.attrs else None
-            for obj, join in self._resolve(value, attr, direction, kind, ctx, object_name):
+            found = self._resolve(value, attr, direction, kind, ctx, object_name)
+            if found is not None:
+                obj, join = found
                 by_object.setdefault(obj, _Joins()).add(attr, field_name, join)
         for obj, joins in by_object.items():
             self.controls.append(
@@ -493,23 +496,28 @@ class _Reader:
 
     def _resolve(
         self, value: str, attr: str, direction: str, kind: str, ctx: _Context, where: str
-    ) -> list[tuple[int, int]]:
-        """(smart object, join) for an attribute value, or [] after noting why not."""
+    ) -> tuple[int, int] | None:
+        """(smart object, join) for an attribute value, or None.
+
+        A value that names something this tool cannot resolve is recorded in
+        self.unresolved on the way; values that need no join (0, Construct's
+        contract marker, a list template covered by the contract) are not.
+        """
         value = value.strip()
         if _JOIN_NUMBER.fullmatch(value):
             join = int(value)
-            return [(0, join + ctx.offsets[_KIND_INDEX[kind]])] if join else []
+            return (0, join + ctx.offsets[_KIND_INDEX[kind]]) if join else None
         if _TEMPLATE_VAR.search(value):
             # A list item template. With a contract, each item's signals are
             # listed in the contract and reported from there; without one, the
             # numbering is decided at run time and is not guessed at here.
             if not self.contract.signals:
                 self._note(ctx, where, attr, value, "a list template, numbered at run time")
-            return []
+            return None
         if value == CONTRACT_ENABLED and self.contract.signals:
             # Construct's marker for "this component's joins come from the
             # contract under its contractname"; they are reported from there.
-            return []
+            return None
         name = ctx.prefix + value
         found = self.contract.lookup(name, direction, kind)
         if found is None:
@@ -521,9 +529,9 @@ class _Reader:
             else:
                 reason = "no contract to look it up in"
             self._note(ctx, where, attr, name, reason)
-            return []
+            return None
         self.used.add(found)
-        return [(found.smart_object, found.join)]
+        return (found.smart_object, found.join)
 
     def _note(self, ctx: _Context, where: str, attr: str, value: str, reason: str) -> None:
         place = "".join(f" > {t}" for t in ctx.trail[1:]) + f", {where}"
