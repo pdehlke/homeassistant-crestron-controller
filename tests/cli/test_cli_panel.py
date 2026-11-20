@@ -11,14 +11,15 @@ import argparse
 import codecs
 import csv
 import socket
+import zipfile
 
 import pytest
 import yaml
 from cipcore import joinmap
 from cli_fakes import FIXTURES, read_line
 
-from crestron_controller_cli import ctp, panel
-from crestron_controller_cli.panel import Control, Project, UnsupportedFormat
+from crestron_controller_cli import ctp, draft, panel, x52
+from crestron_controller_cli.project import FORMATS_DOC, Control, Project, UnsupportedFormat
 
 FIXTURE = FIXTURES / "environment-x52-synthetic.xml"
 
@@ -43,24 +44,23 @@ def test_fixture_is_utf16_with_bom_and_a_junk_tail():
 
 
 def test_decode_trims_everything_after_the_root():
-    text = panel.decode_project(FIXTURE.read_bytes())
+    text = x52.decode_project(FIXTURE.read_bytes())
     assert text.startswith("<Crestron>") and text.endswith("</Crestron>")
 
 
 def test_decode_utf8_with_bom_and_declaration():
     raw = codecs.BOM_UTF8 + b'<?xml version="1.0" encoding="UTF-16"?>\n<Crestron></Crestron>\0\0'
-    assert panel.decode_project(raw) == "<Crestron></Crestron>"
+    assert x52.decode_project(raw) == "<Crestron></Crestron>"
 
 
 def test_decode_utf16_without_bom():
     raw = "<Crestron></Crestron>".encode("utf-16-le") + b"\0" * 5
-    assert panel.decode_project(raw) == "<Crestron></Crestron>"
+    assert x52.decode_project(raw) == "<Crestron></Crestron>"
 
 
 @pytest.mark.parametrize(
     ("raw", "message"),
     [
-        (b"PK\x03\x04rest-of-a-zip", "ch5z"),
         (b"<!DOCTYPE html><html><body></body></html>", "HTML"),
         (b"\x89PNG\r\n\x1a\n binary", "not look like XML"),
         (b"<Crestron><Properties>", "never closed"),
@@ -69,20 +69,29 @@ def test_decode_utf16_without_bom():
 )
 def test_unsupported_inputs_are_refused(raw, message):
     with pytest.raises(UnsupportedFormat, match=message):
-        panel.decode_project(raw)
+        x52.decode_project(raw)
 
 
 def test_unsupported_formats_point_at_the_docs():
     with pytest.raises(UnsupportedFormat) as info:
-        panel.decode_project(b"PK\x03\x04")
-    assert panel.FORMATS_DOC in str(info.value)
+        x52.decode_project(b"\x89PNG\r\n\x1a\n binary")
+    assert FORMATS_DOC in str(info.value)
+
+
+def test_a_zip_that_is_not_a_ch5z_is_refused_with_the_docs(tmp_path):
+    path = tmp_path / "project.vtz"
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("Environment.xml", "<Crestron></Crestron>")
+    with pytest.raises(UnsupportedFormat, match="not a .ch5z project") as info:
+        panel.load_project(path)
+    assert FORMATS_DOC in str(info.value)
 
 
 def test_other_xml_is_refused():
     with pytest.raises(UnsupportedFormat, match="not a Crestron"):
-        panel.parse_project("<project><page/></project>")
+        x52.parse_project("<project><page/></project>")
     with pytest.raises(UnsupportedFormat, match="Pages"):
-        panel.parse_project(
+        x52.parse_project(
             "<Crestron><TargetControl>Project</TargetControl><Properties/></Crestron>"
         )
 
@@ -163,8 +172,8 @@ def test_unplaced_subpage_and_hardkeys(project):
 
 
 def test_inventory_csv(project):
-    lines = panel.inventory_csv(project).splitlines()
-    assert lines[0].split(",") == list(panel.CSV_FIELDS)
+    lines = draft.inventory_csv(project).splitlines()
+    assert lines[0].split(",") == list(draft.CSV_FIELDS)
     assert any("Kitchen Pendants,301,301" in line for line in lines)
     rows = list(csv.DictReader(lines))
     assert any(row["offsets_applied"] == "d+100" for row in rows)
@@ -172,7 +181,7 @@ def test_inventory_csv(project):
 
 
 def test_draft_passes_join_map_validation_and_writes_nothing(project):
-    text = panel.draft_join_map(project, source="fixture.xml")
+    text = draft.draft_join_map(project, source="fixture.xml")
     jm = joinmap.parse(yaml.safe_load(text))
     assert {e.type for e in jm.entities} == {"binary_sensor", "sensor"}
     assert all(not e.writes() for e in jm.entities)
@@ -180,7 +189,7 @@ def test_draft_passes_join_map_validation_and_writes_nothing(project):
 
 
 def test_draft_lists_a_shared_join_once(project):
-    text = panel.draft_join_map(project)
+    text = draft.draft_join_map(project)
     jm = joinmap.parse(yaml.safe_load(text))
     porch = [e for e in jm.entities if e.join == 302]
     assert len(porch) == 1 and porch[0].name == "Porch"
@@ -188,14 +197,14 @@ def test_draft_lists_a_shared_join_once(project):
 
 
 def test_draft_names_hardkey_joins_after_a_labelled_button(project):
-    jm = joinmap.parse(yaml.safe_load(panel.draft_join_map(project)))
+    jm = joinmap.parse(yaml.safe_load(draft.draft_join_map(project)))
     (lights,) = [e for e in jm.entities if e.join == 21]
     assert lights.name == "Lights"
 
 
 def test_draft_header_and_subsystem_candidates(project):
-    text = panel.draft_join_map(project)
-    assert panel.JOIN_MAP_DOC in text
+    text = draft.draft_join_map(project)
+    assert draft.JOIN_MAP_DOC in text
     assert "#       lights: {join: 21}" in text
     assert "flips the panel to Lights" in text
     assert "#       audio: {join: 22}" in text
@@ -217,7 +226,7 @@ def test_draft_handles_awkward_labels():
         Control("A", "A", "Simple_Label", "L1", '"Quoted" #hash', serial=3),
     ]
     project = Project("TSW-752", None, ["A", "B"], controls)
-    jm = joinmap.parse(yaml.safe_load(panel.draft_join_map(project)))
+    jm = joinmap.parse(yaml.safe_load(draft.draft_join_map(project)))
     ids = [e.id for e in jm.entities]
     assert len(set(ids)) == len(ids)
     names = {e.name for e in jm.entities}
@@ -225,7 +234,7 @@ def test_draft_handles_awkward_labels():
 
 
 def test_empty_project_drafts_an_empty_map():
-    text = panel.draft_join_map(Project(None, None))
+    text = draft.draft_join_map(Project(None, None))
     assert joinmap.parse(yaml.safe_load(text)).entities == ()
 
 
@@ -257,7 +266,7 @@ def test_parse_command_refuses_unsupported(tmp_path, capsys):
     bad.write_bytes(b"PK\x03\x04whatever")  # a zip signature on a damaged file
     args = parse_args("parse", str(bad))
     assert args.func(args) == 2
-    assert panel.FORMATS_DOC in capsys.readouterr().err
+    assert FORMATS_DOC in capsys.readouterr().err
 
 
 def _fetch_args(port: int, out) -> argparse.Namespace:
@@ -319,9 +328,9 @@ def test_a_crafted_label_cannot_add_entries_to_the_draft(brk):
         Control("Home", "Home", "Simple_Button", "B3", "Hall", press=12),
     ]
     project = Project("TSW-752", "Home", ["Home", "Other"], controls, unresolved=[evil])
-    text = panel.draft_join_map(project)
+    text = draft.draft_join_map(project)
     jm = joinmap.parse(yaml.safe_load(text))
     assert {e.type for e in jm.entities} == {"binary_sensor"}
     assert all(not e.writes() for e in jm.entities)
     assert len(jm.entities) == 2
-    assert all(c not in panel.summary(project) for c in ("\x85", " ", " "))
+    assert all(c not in draft.summary(project) for c in ("\x85", " ", " "))

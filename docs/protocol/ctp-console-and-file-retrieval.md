@@ -75,7 +75,7 @@ request down.
 XMODEM carries no file length, so the last block is padded. `ctp.strip_padding()` removes trailing
 `SUB` (`1A`) bytes. The panel project file observed here was padded with NUL bytes after its closing
 `</Crestron>` tag instead, which makes it invalid XML until the tail is cut;
-`crestron_controller_cli/panel.py` trims it.
+`crestron_controller_cli/x52.py` trims it.
 
 ## How long it takes
 

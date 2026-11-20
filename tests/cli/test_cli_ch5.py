@@ -23,7 +23,8 @@ from cipcore import joinmap
 from cli_fakes import FIXTURES
 
 from crestron_controller_cli import ch5, panel
-from crestron_controller_cli.panel import Project, UnsupportedFormat
+from crestron_controller_cli.draft import draft_join_map
+from crestron_controller_cli.project import FORMATS_DOC, Control, Project, UnsupportedFormat
 
 LIGHTDARK = FIXTURES / "ch5" / "construct-themes-showcase-lightdark.ch5z"
 CWSDEBUG = FIXTURES / "ch5" / "cwsdebug-example.ch5z"
@@ -56,12 +57,12 @@ def read(files: dict[str, str | bytes]) -> Project:
     return ch5.load_ch5z(make_ch5z(files))
 
 
-def by_object(project: Project, name: str) -> list[panel.Control]:
+def by_object(project: Project, name: str) -> list[Control]:
     return [c for c in project.controls if c.object_name == name]
 
 
 def draft(project: Project) -> joinmap.JoinMap:
-    return joinmap.parse(yaml.safe_load(panel.draft_join_map(project, source="demo.ch5z")))
+    return joinmap.parse(yaml.safe_load(draft_join_map(project, source="demo.ch5z")))
 
 
 # ---- the archive -------------------------------------------------------------------
@@ -92,7 +93,7 @@ def test_archive_layout_matches_the_published_archiver():
 def test_archives_that_are_not_ch5z_projects_are_refused(raw, message):
     with pytest.raises(UnsupportedFormat, match=message) as info:
         ch5.load_ch5z(raw)
-    assert panel.FORMATS_DOC in str(info.value)
+    assert FORMATS_DOC in str(info.value)
 
 
 def test_an_oversized_inner_archive_is_refused_unread(monkeypatch):
@@ -252,8 +253,8 @@ def test_draft_from_a_contract_reads_smart_objects_and_writes_nothing(with_contr
 
 
 def test_draft_says_it_is_experimental_and_lists_unresolved(with_contract):
-    text = panel.draft_join_map(with_contract)
-    assert "EXPERIMENTAL" in text and panel.FORMATS_DOC in text
+    text = draft_join_map(with_contract)
+    assert "EXPERIMENTAL" in text and FORMATS_DOC in text
     assert "logsbtn.clicked" in text
     assert all(len(line) <= 100 for line in text.splitlines())
 
@@ -482,7 +483,7 @@ def test_list_presses_are_never_subsystem_entry_candidates():
             ),
         }
     )
-    text = panel.draft_join_map(project)
+    text = draft_join_map(project)
     assert "lights: {join: 21}" in text
     assert "item: {join: 1}" not in text
 

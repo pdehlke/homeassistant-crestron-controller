@@ -51,7 +51,7 @@ from html.parser import HTMLParser
 from typing import Any
 
 from . import ch5_signals as sig
-from .panel import FORMATS_DOC, Control, Project, UnsupportedFormat
+from .project import FORMATS_DOC, Control, Project, UnsupportedFormat
 
 CONTRACT_PATH = "config/contract.cse2j"
 PROJECT_CONFIG = "assets/data/project-config.json"
