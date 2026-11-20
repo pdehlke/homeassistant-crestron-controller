@@ -85,7 +85,13 @@ def _clean(text: str) -> str:
 
 
 def _finish(lines: list[str]) -> str:
-    """Join draft lines, cleaning every comment line of characters that could end it early."""
+    """Join draft lines, cleaning every comment line of characters that could end it early.
+
+    This is the last point before the draft is written, and it relies on one
+    rule: a line that is not a comment holds only fixed text, integers, and
+    strings passed through _q. Text from a project file must never reach such
+    a line any other way, or a crafted label could add YAML of its own.
+    """
     out = [_clean(line) if line.lstrip().startswith("#") else line for line in lines]
     return "\n".join(out) + "\n"
 
